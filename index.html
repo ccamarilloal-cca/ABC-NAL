@@ -1,0 +1,2395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HUB OPERATIVO · NAL · ABC Ximple Logistics</title>
+<link rel="manifest" id="manifestLink">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HUB NAL">
+<meta name="theme-color" content="#1a1a2e">
+<script>
+// Para GitHub Pages: manifest.json y sw.js deben estar en el mismo repo
+// Si estás en GitHub Pages, cambia el href del manifest a './manifest.json'
+// Manifest ya configurado con íconos del trailer ABC
+document.getElementById('manifestLink').href='./manifest.json';
+// Registrar service worker para PWA
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js')
+    .then(()=>console.log('SW registrado'))
+    .catch(()=>{
+      // Fallback: inyectar manifest como blob si no hay archivo
+      const m={name:"ABC",short_name:"ABC",start_url:"./index.html",display:"standalone",background_color:"#1a1a2e",theme_color:"#1a1a2e",icons:[{src:"./icon-192x192.png",sizes:"192x192",type:"image/png",purpose:"any maskable"},{src:"./icon-512x512.png",sizes:"512x512",type:"image/png"}]};
+      document.getElementById('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/json'}));
+    });
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:13px}
+/* NAV */
+#nav{position:sticky;top:0;z-index:200;background:#fff;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;padding:0 14px;height:50px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.brand{display:flex;align-items:center;gap:8px;margin-right:18px;flex-shrink:0}
+.brand .pill{background:#1a1a2e;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px}
+.brand .nm{font-size:12px;font-weight:700;color:#1a1a2e}
+.tabs{display:flex;gap:2px;overflow-x:auto;flex:1}.tabs::-webkit-scrollbar{height:0}
+.tb{padding:5px 13px;border:none;background:transparent;color:#64748b;cursor:pointer;font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:500;border-radius:5px;white-space:nowrap;transition:.15s}
+.tb:hover{background:#f1f5f9;color:#1a1a2e}.tb.on{background:#1a1a2e;color:#fff}
+.nav-r{display:flex;align-items:center;gap:8px;margin-left:10px;flex-shrink:0}
+#clock{font-size:11px;color:#64748b}
+#uploadBtn{display:flex;align-items:center;gap:5px;background:#2980b9;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;transition:.15s}
+#uploadBtn:hover{background:#2471a3}
+/* STORAGE BANNER */
+#sbanner{display:none;align-items:center;justify-content:center;gap:8px;background:#f0fff4;border-bottom:1px solid #a9dfbf;padding:5px 14px;font-size:11px;color:#1e8449;font-weight:500}
+#sbanner button{background:none;border:1px solid #a9dfbf;color:#1e8449;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:10px}
+/* UPLOAD PANEL */
+#uPanel{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.5);align-items:center;justify-content:center}
+#uPanel.open{display:flex}
+#uBox{background:#fff;border-radius:12px;padding:26px;width:500px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.uTitle{font-size:16px;font-weight:700;margin-bottom:5px}
+.uSub{font-size:12px;color:#64748b;margin-bottom:18px}
+.frow{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px dashed #cbd5e1;border-radius:7px;margin-bottom:7px;cursor:pointer;background:#f8f9fa;transition:.15s}
+.frow:hover{border-color:#3498db;background:#ebf5fb}
+.frow.loaded{border-color:#27ae60;background:#f0fff4;border-style:solid}
+.frow .ficon{font-size:18px;flex-shrink:0}
+.frow .fname{font-size:12px;font-weight:600}
+.frow .fdesc{font-size:10px;color:#64748b}
+.frow .fst{margin-left:auto;font-size:11px;font-weight:600;color:#94a3b8}
+.frow.loaded .fst{color:#27ae60}
+#procBtn{width:100%;background:#1a1a2e;color:#fff;border:none;padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;transition:.15s}
+#procBtn:hover{background:#0f172a}
+#procBtn:disabled{background:#94a3b8;cursor:not-allowed}
+#uMsg{font-size:11px;color:#64748b;text-align:center;margin-top:8px;min-height:16px}
+/* MAIN */
+#main{padding:14px;max-width:1200px;margin:0 auto}
+.pane{display:none}.pane.on{display:block}
+/* REPORT HEADER */
+.rhdr{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);color:#fff;border-radius:10px;padding:16px 22px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.rhdr h1{font-size:17px;font-weight:700}
+.rhdr .rsub{font-size:11px;opacity:.8;margin-top:2px}
+.rhdr .rmeta{text-align:right;font-size:11px;opacity:.85;line-height:1.8}
+.rhdr .rmeta strong{font-size:13px;color:#4fc3f7}
+/* CARDS */
+.card{background:#fff;border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:12px}
+.chd{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:#475569;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #f0f2f5;padding-bottom:7px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+/* KPI TILES */
+.kr{display:grid;gap:10px;margin-bottom:12px}
+.kr.k6{grid-template-columns:repeat(6,1fr)}
+.kr.k4{grid-template-columns:repeat(4,1fr)}
+.kr.k3{grid-template-columns:repeat(3,1fr)}
+.kt{background:#fff;border-radius:8px;padding:11px 12px;box-shadow:0 1px 4px rgba(0,0,0,.08);border-top:3px solid #ccc;cursor:pointer;transition:.15s}
+.kt:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.kt .v{font-size:22px;font-weight:800;line-height:1.1}
+.kt .l{font-size:10px;color:#64748b;margin-top:3px;text-transform:uppercase;letter-spacing:.4px}
+.kt .s{font-size:10px;margin-top:1px}
+.kg{border-top-color:#2ecc71}.kg .v{color:#27ae60}
+.kr2{border-top-color:#e74c3c}.kr2 .v{color:#c0392b}
+.ky{border-top-color:#f59e0b}.ky .v{color:#d68910}
+.kb{border-top-color:#3498db}.kb .v{color:#2980b9}
+.ko{border-top-color:#e67e22}.ko .v{color:#d35400}
+.kp{border-top-color:#9b59b6}.kp .v{color:#8e44ad}
+/* FLEET GRID */
+.fg{display:grid;grid-template-columns:repeat(9,1fr);gap:7px;margin-bottom:9px}
+.fb{background:#f8f9fa;border-radius:6px;padding:9px 5px;text-align:center;border:1px solid #e2e8f0;cursor:pointer;transition:.15s}
+.fb:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.1)}
+.fb .fn{font-size:22px;font-weight:800;line-height:1}
+.fb .fc{font-size:10px;font-weight:700;margin-top:2px}
+.fb .fl{font-size:9px;color:#64748b;margin-top:1px}
+.fTRN{border-top:3px solid #2ecc71}.fTRN .fn,.fTRN .fc{color:#27ae60}
+.fVTA{border-top:3px solid #3498db}.fVTA .fn,.fVTA .fc{color:#2980b9}
+.fDCO{border-top:3px solid #95a5a6}.fDCO .fn,.fDCO .fc{color:#7f8c8d}
+.fLIB{border-top:3px solid #f59e0b}.fLIB .fn,.fLIB .fc{color:#d68910}
+.fSO{border-top:3px solid #e74c3c}.fSO .fn,.fSO .fc{color:#c0392b}
+.fCP{border-top:3px solid #e67e22}.fCP .fn,.fCP .fc{color:#d35400}
+.fSG{border-top:3px solid #9b59b6}.fSG .fn,.fSG .fc{color:#8e44ad}
+.fRM{border-top:3px solid #c0392b}.fRM .fn,.fRM .fc{color:#922b21}
+.fPER{border-top:3px solid #bdc3c7}.fPER .fn,.fPER .fc{color:#7f8c8d}
+/* ALERT LISTS */
+.al{list-style:none}
+.al li{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid #f0f2f5;font-size:12px;line-height:1.5}
+.al li:last-child{border-bottom:none}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.dr{background:#e74c3c}.dy{background:#f59e0b}.dg{background:#2ecc71}.db2{background:#3498db}.do{background:#e67e22}
+/* BADGES */
+.bg{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600}
+.bgr{background:#fde8e8;color:#c0392b;border:1px solid #f5c6c6}
+.bgg{background:#e9f7ef;color:#1e8449;border:1px solid #a9dfbf}
+.bgy{background:#fef9e7;color:#b7950b;border:1px solid #f9e79f}
+.bgb{background:#ebf5fb;color:#2471a3;border:1px solid #aed6f1}
+.bgo{background:#fef0e7;color:#ca6f1e;border:1px solid #f0b27a}
+.bgp{background:#f5eef8;color:#7d3c98;border:1px solid #d7bde2}
+.bgx{background:#f8f9fa;color:#5d6d7e;border:1px solid #d5d8dc}
+/* TABLES */
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.tbl th{background:#f8f9fa;padding:7px 9px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0}
+.tbl td{padding:6px 9px;border-bottom:1px solid #f0f2f5;vertical-align:middle}
+.tbl tr:hover td{background:#f8f9fa}.tbl tr:last-child td{border-bottom:none}
+.ovf{overflow:auto}
+/* UNIT CARDS */
+.ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:10px}
+.uc{background:#fff;border-radius:8px;padding:11px;box-shadow:0 1px 4px rgba(0,0,0,.07);cursor:pointer;transition:.15s;border-left:4px solid #e2e8f0}
+.uc:hover{box-shadow:0 4px 14px rgba(0,0,0,.12);transform:translateY(-1px)}
+.ucTRN{border-left-color:#2ecc71}.ucVTA{border-left-color:#3498db}
+.ucSO,.ucDSO{border-left-color:#e74c3c}
+.ucCP,.ucSG,.ucRM,.ucSGR{border-left-color:#e67e22}
+.ucDCO{border-left-color:#95a5a6}.ucLIB{border-left-color:#f59e0b}.ucPER{border-left-color:#bdc3c7}
+.uc .un{font-size:14px;font-weight:800}
+.uc .uop{font-size:11px;color:#64748b;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uc .urt{font-size:10px;color:#2980b9;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uc .tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+.uc .ucirc{font-size:10px;color:#94a3b8;margin-top:5px}
+/* SEARCH / FILTER */
+.sw{position:relative;margin-bottom:10px}
+.sw input{width:100%;border:1px solid #e2e8f0;border-radius:7px;padding:9px 14px 9px 38px;font-size:13px;font-family:'Segoe UI',sans-serif;outline:none;transition:.15s;background:#fff}
+.sw input:focus{border-color:#3498db;box-shadow:0 0 0 3px rgba(52,152,219,.1)}
+.sw::before{content:'🔍';position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:13px}
+.fbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.fbtn{padding:4px 12px;border:1px solid #e2e8f0;background:#fff;color:#64748b;border-radius:20px;cursor:pointer;font-size:11px;font-family:'Segoe UI',sans-serif;transition:.15s}
+.fbtn:hover,.fbtn.on{background:#1a1a2e;color:#fff;border-color:#1a1a2e}
+/* COORD CARDS */
+.cc{background:#f8f9fa;border-radius:8px;padding:12px;border-left:4px solid #3498db}
+.cc .cname{font-size:12px;font-weight:700}
+.cc .cstats{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px;font-size:11px}
+.cc .cstat{padding:5px 8px;background:#fff;border-radius:5px;text-align:center}
+.cc .cstat .cv{font-size:16px;font-weight:800}
+.cc .cstat .cl{font-size:9px;color:#64748b;text-transform:uppercase}
+/* REND BAR */
+.rb{display:flex;align-items:center;gap:7px;font-size:11px}
+.rb .rv{font-weight:700;min-width:38px}
+.rb .track{flex:1;background:#f0f2f5;border-radius:3px;height:5px;overflow:hidden}
+.rb .fill{height:100%;border-radius:3px}
+/* TIPO ROW */
+.trow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f2f5;font-size:12px}
+.trow:last-child{border-bottom:none}
+.tname{min-width:100px;font-weight:600}
+.tbar{flex:1;height:8px;background:#f0f2f5;border-radius:4px;overflow:hidden}
+.tfill{height:100%;border-radius:4px}
+.tval{min-width:60px;text-align:right;font-weight:700;font-family:'Courier New',monospace}
+/* PLAN */
+.prow{display:grid;grid-template-columns:120px 1fr 150px 75px;gap:8px;padding:8px;border-bottom:1px solid #f0f2f5;align-items:start;font-size:12px}
+.prow:last-child{border-bottom:none}
+/* PROG */
+.prog{background:#f0f2f5;border-radius:3px;height:5px;overflow:hidden;margin-top:3px}
+.prog .pf{height:100%;border-radius:3px}
+/* MODAL */
+#modal{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);display:none;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto}
+#modal.open{display:flex}
+#mbox{background:#fff;border-radius:12px;width:100%;max-width:880px;margin-top:58px;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative}
+#mc{padding:22px}
+#mcls{position:absolute;top:12px;right:14px;background:#f0f2f5;border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:15px;color:#64748b;display:flex;align-items:center;justify-content:center}
+#mcls:hover{background:#e2e8f0}
+/* TOAST */
+#toast{position:fixed;bottom:20px;right:20px;background:#1a1a2e;color:#fff;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:600;z-index:9999;opacity:0;transition:.3s;pointer-events:none}
+#toast.show{opacity:1}
+/* UTILS */
+.tr{color:#c0392b}.tg{color:#27ae60}.tye{color:#d68910}.tb3{color:#2980b9}.muted{color:#64748b}.bold{font-weight:700}
+@media(max-width:900px){.kr.k6{grid-template-columns:repeat(3,1fr)}.fg{grid-template-columns:repeat(3,1fr)}.g2,.g3{grid-template-columns:1fr}.prow{grid-template-columns:1fr}}
+@media(max-width:480px){.kr.k6,.kr.k4{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="sbanner">💾 <span id="sbtxt"></span><button onclick="clearStor()">🗑 Limpiar datos</button></div>
+<nav id="nav">
+  <div class="brand"><span class="pill">NAL</span><span class="nm" id="brandNm">HUB OPERATIVO · ABC XIMPLE</span></div>
+  <div class="tabs">
+    <button class="tb on" onclick="go('dash',this)">📊 Resumen del Día</button>
+    <button class="tb" onclick="go('flota',this)">🚛 Flota</button>
+    <button class="tb" onclick="go('inc',this)">⚠️ Incidencias</button>
+    <button class="tb" onclick="go('rend',this)">⛽ Rendimiento</button>
+    <button class="tb" onclick="go('mtto',this)">🔧 Mantenimiento</button>
+    <button class="tb" onclick="go('seg',this)">🛡️ Seguridad</button>
+    <button class="tb" onclick="go('circ',this)">📦 Circuitos</button>
+    <button class="tb" onclick="go('mens',this)">📈 Resumen Mensual</button>
+    <button class="tb" onclick="go('cajas',this)">📦 Cajas</button>
+    <button class="tb" onclick="go('whats',this)" style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff">💬 WhatsApp</button>
+  </div>
+  <div class="nav-r">
+    <span id="clock"></span>
+    <button id="syncBtn" onclick="syncSheet()" title="Sincronizar con Google Sheet" style="display:flex;align-items:center;gap:5px;background:#27ae60;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;transition:.15s">🔄 Sync Sheet</button>
+    <button id="uploadBtn" onclick="openU()">📂 Actualizar Datos</button>
+  </div>
+</nav>
+
+<!-- UPLOAD PANEL -->
+<div id="uPanel">
+  <div id="uBox">
+    <div class="uTitle">📂 Actualizar Datos Operativos</div>
+    <div class="uSub">Selecciona tus archivos Excel. El sistema lee solo las 83 unidades NAL y actualiza todo automáticamente.</div>
+    <div class="frow" id="fr-est" onclick="tf('est')"><span class="ficon">📋</span><div><div class="fname">Estatus Diario</div><div class="fdesc">EstatusDiarioDetalle_*.xlsx</div></div><span class="fst" id="fs-est">Sin cargar</span></div>
+    <div class="frow" id="fr-inc" onclick="tf('inc2')"><span class="ficon">⚠️</span><div><div class="fname">Incidencias</div><div class="fdesc">Incidencias_*.xlsx</div></div><span class="fst" id="fs-inc">Sin cargar</span></div>
+    <div class="frow" id="fr-rend" onclick="tf('rend2')"><span class="ficon">⛽</span><div><div class="fname">Rendimientos</div><div class="fdesc">Rendimientos_*.xlsx</div></div><span class="fst" id="fs-rend">Sin cargar</span></div>
+    <div class="frow" id="fr-sol" onclick="tf('sol')"><span class="ficon">🔧</span><div><div class="fname">Solicitudes Mantenimiento</div><div class="fdesc">Solicitud_*.xlsx</div></div><span class="fst" id="fs-sol">Sin cargar</span></div>
+    <div class="frow" id="fr-data" onclick="tf('data')"><span class="ficon">📦</span><div><div class="fname">Data / Circuitos</div><div class="fdesc">data_*.xlsx</div></div><span class="fst" id="fs-data">Sin cargar</span></div>
+    <div class="frow" id="fr-mov" onclick="tf('mov')"><span class="ficon">💰</span><div><div class="fname">Movimientos RH</div><div class="fdesc">Movimientos_*.xlsx</div></div><span class="fst" id="fs-mov">Sin cargar</span></div>
+    <div class="frow" id="fr-caj" onclick="tf('caj')"><span class="ficon">📦</span><div><div class="fname">Control de Cajas</div><div class="fdesc">Cajas_*.xlsx · 130 cajas totales</div></div><span class="fst" id="fs-caj">Sin cargar</span></div>
+    <input type="file" id="fi-caj"  accept=".xlsx,.csv" style="display:none" onchange="fl('caj',this)">
+    <input type="file" id="fi-est"  accept=".xlsx,.csv" style="display:none" onchange="fl('est',this)">
+    <input type="file" id="fi-inc2" accept=".xlsx,.csv" style="display:none" onchange="fl('inc2',this)">
+    <input type="file" id="fi-rend2" accept=".xlsx,.csv" style="display:none" onchange="fl('rend2',this)">
+    <input type="file" id="fi-sol"  accept=".xlsx,.csv" style="display:none" onchange="fl('sol',this)">
+    <input type="file" id="fi-data" accept=".xlsx,.csv" style="display:none" onchange="fl('data',this)">
+    <input type="file" id="fi-mov"  accept=".xlsx,.csv" style="display:none" onchange="fl('mov',this)">
+    <button id="procBtn" onclick="processAll()">⚡ Procesar y Actualizar</button>
+    <div id="uMsg"></div>
+    <button onclick="closeU()" style="width:100%;background:#f8f9fa;color:#64748b;border:1px solid #e2e8f0;padding:8px;border-radius:8px;font-size:12px;cursor:pointer;margin-top:6px">Cancelar</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+<!-- DASHBOARD -->
+<div id="pane-dash" class="pane on">
+  <div class="rhdr">
+    <div><h1>📋 REPORTE EJECUTIVO OPERACIONES NACIONALES</h1><div class="rsub">ABC Ximple Logistics · Jefa de Operaciones Nacionales</div></div>
+    <div class="rmeta"><div><strong id="fhdr">📅 10 de Mayo, 2026</strong></div><div>Flota NAL: 83 unidades · <span id="hhdr"></span></div></div>
+  </div>
+  <div style="display:inline-flex;align-items:center;gap:5px;background:#fef9e7;border:1px solid #f9e79f;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:#b7950b;margin-bottom:12px">⏰ Junta 10:00 hrs &nbsp;|&nbsp; Siguiente: 17:30 hrs</div>
+  <div class="kr k6" id="kd"></div>
+  <div class="card">
+    <div class="chd">📊 DISTRIBUCIÓN DE FLOTA <span style="font-size:10px;font-weight:400;color:#94a3b8">Clic en cada bloque para filtrar flota</span></div>
+    <div class="fg" id="fg"></div>
+    <div style="font-size:11px;display:flex;gap:18px;flex-wrap:wrap;margin-top:7px">
+      <span><span class="tg bold">✓ Productivas:</span> <span id="pp" class="bold"></span></span>
+      <span style="color:#7f8c8d"><span class="bold">▬ Disponibles:</span> <span id="dp" class="bold"></span></span>
+      <span><span class="tr bold">⚠ Improductivas:</span> <span id="ip" class="bold"></span></span>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="chd" style="color:#c0392b;border-bottom-color:#fde8e8">🔴 CRÍTICOS DEL DÍA</div><ul class="al" id="crit"></ul></div>
+    <div class="card"><div class="chd" style="color:#d68910">🟡 SEGUIMIENTO PENDIENTE</div><ul class="al" id="seg2"></ul></div>
+  </div>
+  <div class="card">
+    <div class="chd">👤 KPI'S POR COORDINADOR <span style="font-size:10px;font-weight:400;color:#94a3b8">Utilidad y rentabilidad NAL</span></div>
+    <div class="g3" id="coords"></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="chd">🚛 RENDIMIENTO POR TIPO DE UNIDAD</div><div id="rtipo"></div></div>
+    <div class="card"><div class="chd" style="color:#d35400">⛽ ALERTAS DIESEL</div><div id="rdash"></div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="chd">📊 KPI'S DEL MES</div><div id="kmes"></div></div>
+    <div class="card"><div class="chd" style="color:#c0392b">🛡️ SEGURIDAD — MAYO</div><div id="segdash"></div></div>
+  </div>
+  <div class="card"><div class="chd" style="color:#27ae60">✅ PLAN DE ACCIÓN — HOY</div><div id="plan"></div></div>
+</div>
+
+<!-- FLOTA -->
+<div id="pane-flota" class="pane">
+  <div class="rhdr" style="margin-bottom:12px">
+    <div><h1 id="flotaTitle">🚛 FLOTA NAL</h1><div class="rsub">Clic en cada unidad para ver historial completo</div></div>
+    <div class="rmeta"><strong id="ucnt">83 unidades</strong></div>
+  </div>
+  <div class="sw"><input id="srch" type="text" placeholder="Buscar: unidad, operador, ruta, coordinador, comentario..." oninput="filterU()"></div>
+  <div class="fbar">
+    <button class="fbtn on" id="fb-ALL" onclick="setF('ALL',this)">Todas</button>
+    <button class="fbtn" id="fb-TRN" onclick="setF('TRN',this)">🟢 Tránsito</button>
+    <button class="fbtn" id="fb-VTA" onclick="setF('VTA',this)">🔵 Facturando</button>
+    <button class="fbtn" id="fb-DCO" onclick="setF('DCO',this)">⚪ Disponible</button>
+    <button class="fbtn" id="fb-LIB" onclick="setF('LIB',this)">🟡 Por Liberar</button>
+    <button class="fbtn" id="fb-SO" onclick="setF('SO',this)" style="color:#c0392b">🔴 Sin Operador</button>
+    <button class="fbtn" id="fb-CP" onclick="setF('CP',this)">🟠 Correctivo</button>
+    <button class="fbtn" id="fb-SG" onclick="setF('SG',this)">🟣 Siniestro</button>
+    <button class="fbtn" id="fb-RM" onclick="setF('RM',this)">⛔ Rep. Mayor</button>
+    <button class="fbtn" id="fb-PER" onclick="setF('PER',this)">🔘 Permiso</button>
+  </div>
+  <div class="ugrid" id="ugrid"></div>
+</div>
+
+<!-- INCIDENCIAS -->
+<div id="pane-inc" class="pane">
+  <div class="rhdr" style="margin-bottom:12px"><div><h1 id="incTitle">⚠️ INCIDENCIAS</h1></div><div class="rmeta"><strong id="inctot">— incidencias</strong></div></div>
+  <div class="kr k4" id="kinc"></div>
+  <div class="g2">
+    <div class="card"><div class="chd">📊 POR TIPO</div><div id="inctype"></div></div>
+    <div class="card"><div class="chd">🔁 OPERADORES RECURRENTES</div><div id="incop"></div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="chd">🚛 UNIDADES RECURRENTES</div><div id="incunit"></div></div>
+    <div class="card"><div class="chd" style="color:#c0392b">🚗 ACCIDENTES</div><div id="incacc"></div></div>
+  </div>
+  <div class="card"><div class="chd">💸 MULTAS NAL</div>
+    <div class="ovf"><table class="tbl"><thead><tr><th>FECHA</th><th>UNIDAD</th><th>OPERADOR</th><th>TIPO</th><th>COSTO</th><th>ESTATUS</th></tr></thead><tbody id="multasbody"></tbody></table></div></div>
+  <div class="card"><div class="chd" style="color:#e67e22">⚠ INDISCIPLINAS NAL</div>
+    <div class="ovf"><table class="tbl"><thead><tr><th>FECHA</th><th>UNIDAD</th><th>OPERADOR</th><th>TIPO</th></tr></thead><tbody id="indisbody"></tbody></table></div></div>
+</div>
+
+<!-- RENDIMIENTO -->
+<div id="pane-rend" class="pane">
+  <div class="rhdr" style="margin-bottom:12px"><div><h1 id="rendTitle">⛽ RENDIMIENTO DIESEL</h1></div><div class="rmeta"><strong id="rendavghdr">Prom: 2.83 km/L</strong></div></div>
+  <div class="kr k4" id="krend"></div>
+  <div class="g2">
+    <div class="card"><div class="chd" style="color:#c0392b">🔴 CRÍTICO &lt;2.0 km/L</div><div id="rcrit"></div></div>
+    <div class="card"><div class="chd" style="color:#d68910">🟡 BAJO 2.0–2.5 km/L</div><div id="rbajo"></div></div>
+  </div>
+  <div class="card"><div class="chd">📋 TODAS LAS UNIDADES — RENDIMIENTO CALCULADO</div>
+    <input style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 12px;font-size:12px;font-family:'Segoe UI',sans-serif;outline:none;margin-bottom:10px" type="text" placeholder="Buscar unidad u operador..." oninput="filterRend(this.value)">
+    <div class="ovf"><table class="tbl"><thead><tr><th>UNIDAD</th><th>OPERADOR</th><th>TIPO</th><th>REND km/L</th><th>KMS</th><th>LITROS</th><th>V.MÁX</th><th>RELENTÍ%</th><th>ESTADO</th></tr></thead><tbody id="rendbody"></tbody></table></div></div>
+</div>
+
+<!-- MANTENIMIENTO -->
+<div id="pane-mtto" class="pane">
+  <div class="rhdr" style="margin-bottom:12px"><div><h1>🔧 MANTENIMIENTO — SOLICITUDES NAL</h1></div><div class="rmeta"><strong id="mttohdr">Solicitudes abiertas</strong></div></div>
+  <div class="kr k4" id="kmtto"></div>
+  <div class="card"><div class="chd">📋 SOLICITUDES ABIERTAS</div>
+    <input style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 12px;font-size:12px;font-family:'Segoe UI',sans-serif;outline:none;margin-bottom:10px" type="text" placeholder="Buscar unidad o descripción..." oninput="filterMtto(this.value)">
+    <div class="ovf"><table class="tbl"><thead><tr><th>#SOL</th><th>UNIDAD</th><th>DESCRIPCIÓN</th><th>FECHA</th><th>ESTATUS</th><th>COORDINADOR</th></tr></thead><tbody id="mttobody"></tbody></table></div></div>
+  <div class="g2">
+    <div class="card"><div class="chd" style="color:#c0392b">⛔ REPARACIONES MAYORES</div><div id="rmdet"></div></div>
+    <div class="card"><div class="chd" style="color:#8e44ad">🔴 SINIESTROS ACTIVOS</div><div id="sgdet"></div></div>
+  </div>
+</div>
+
+<!-- SEGURIDAD -->
+<div id="pane-seg" class="pane">
+  <div class="rhdr" style="margin-bottom:12px"><div><h1 id="segTitle">🛡️ SEGURIDAD</h1></div><div class="rmeta"><strong id="seghdr">NAL solamente</strong></div></div>
+  <div class="kr k4" id="kseg"></div>
+  <div class="g2">
+    <div class="card"><div class="chd" style="color:#c0392b">🚗 ACCIDENTES — DETALLE</div><div id="accfull"></div></div>
+    <div class="card"><div class="chd" style="color:#e67e22">⚠ INDISCIPLINAS</div><div id="indisfull"></div></div>
+  </div>
+  <div class="card"><div class="chd" style="color:#d68910">📸 MULTAS CÁMARA — PATRÓN RECURRENTE</div><div id="camaradet"></div></div>
+</div>
+
+<!-- CIRCUITOS -->
+<div id="pane-circ" class="pane">
+  <div class="rhdr" style="margin-bottom:12px"><div><h1 id="circTitle">📦 RENTABILIDAD POR CIRCUITO</h1></div><div class="rmeta"><strong id="circSubhdr">Cargando...</strong></div></div>
+  <div class="card ovf"><div class="chd">📊 COMPARATIVA</div>
+    <table class="tbl"><thead><tr><th>CIRCUITO</th><th>UDS</th><th>FACTURACIÓN</th><th>UTILIDAD</th><th>UTIL/UNIDAD</th><th>KMS</th><th>REND</th><th>SEMÁFORO</th></tr></thead><tbody id="circbody"></tbody></table></div>
+  <div class="g2">
+    <div class="card"><div class="chd" style="color:#c0392b">🔴 EN PÉRDIDA</div><div id="circloss"></div></div>
+    <div class="card"><div class="chd" style="color:#27ae60">🟢 RENTABLES</div><div id="circprofit"></div></div>
+  </div>
+</div>
+
+<!-- ACUMULADO -->
+<div id="pane-mens" class="pane">
+  <div class="rhdr" style="margin-bottom:12px"><div><h1 id="mensTitle">📈 RESUMEN MENSUAL</h1></div><div class="rmeta"><strong id="mensSubhdr">Cargando datos...</strong></div></div>
+  <div class="kr k4" id="kmens"></div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="chd">👥 RESUMEN POR COORDINADOR — MES</div>
+    <div class="ovf"><table class="tbl" id="coordSum">
+      <thead><tr><th>COORDINADOR</th><th>FACTURACIÓN</th><th>UTILIDAD</th><th>MARGEN</th><th>VIAJES</th><th>KM CARG</th><th>KM VAC</th><th>UDS</th><th>CAJAS</th><th>INC</th></tr></thead>
+      <tbody></tbody></table></div>
+  </div>
+  <div class="g2" style="margin-bottom:12px">
+    <div class="card">
+      <div class="chd">🏆 TOP 10 CIRCUITOS MÁS RENTABLES</div>
+      <div class="ovf"><table class="tbl" id="top10circs">
+        <thead><tr><th>CIRCUITO</th><th>UTILIDAD</th><th>MARGEN</th><th>UDS</th></tr></thead>
+        <tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="chd">⚠️ TOP 10 CIRCUITOS MENOS RENTABLES</div>
+      <div class="ovf"><table class="tbl" id="top10circsMenos">
+        <thead><tr><th>CIRCUITO</th><th>UTILIDAD</th><th>MARGEN</th><th>UDS</th></tr></thead>
+        <tbody></tbody></table></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="chd">💰 MOVIMIENTOS RH — MAYO</div>
+      <div class="ovf" style="max-height:300px"><table class="tbl"><thead><tr><th>CONCEPTO</th><th>CANT.</th><th>MONTO</th></tr></thead><tbody id="rhbody"></tbody></table></div></div>
+    <div class="card"><div class="chd" style="color:#c0392b">🏴 ÁREAS DE MAYOR RIESGO</div><ul class="al" id="riskl"></ul></div>
+  </div>
+  <div class="card"><div class="chd">🔁 TOP RECURRENTES DEL MES</div>
+    <div class="g2" style="margin-bottom:0">
+      <div><div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:7px;text-transform:uppercase">Top Operadores</div><div id="oprec"></div></div>
+      <div><div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:7px;text-transform:uppercase">Top Unidades</div><div id="unitrec"></div></div>
+    </div>
+  </div>
+  <div class="card"><div class="chd">🎯 CONCLUSIÓN EJECUTIVA</div><div id="concl" style="font-size:12px;line-height:1.9;color:#475569"></div></div>
+</div>
+
+<!-- CAJAS -->
+<div id="pane-cajas" class="pane">
+  <div class="rhdr" style="margin-bottom:12px">
+    <div><h1>📦 CONTROL DE CAJAS</h1><div class="rsub">Clic en indicador para filtrar · Búsqueda en tiempo real</div></div>
+    <div class="rmeta"><strong id="cajhdr">Sin datos cargados</strong></div>
+  </div>
+  <div class="kr" id="kcaj" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr));margin-bottom:12px"></div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="chd">🔍 BUSCAR CAJA</div>
+    <input id="cajsrch" style="width:100%;border:1px solid #e2e8f0;border-radius:7px;padding:9px 14px;font-size:13px;font-family:'Segoe UI',sans-serif;outline:none;background:#fff" type="text" placeholder="Caja, cliente, operador, ubicación, estatus..." oninput="filterCajas(this.value)">
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="chd">👥 CAJAS POR COORDINADOR</div>
+    <div class="ovf"><table class="tbl">
+      <thead><tr><th>COORDINADOR</th><th>TOTAL</th><th>CARGADAS</th><th>DISPONIBLES</th><th>PATIO</th><th>DAÑADAS</th><th>TRÁNSITO</th><th>SINIESTRO</th><th>NO LOCAL.</th></tr></thead>
+      <tbody id="cajbycoord"><tr><td colspan=9 style="text-align:center;color:#64748b;padding:12px">Carga el archivo de Cajas</td></tr></tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="chd" id="cajdetlbl">📋 DETALLE COMPLETO DE CAJAS</div>
+    <div class="ovf"><table class="tbl" id="cajtbl">
+      <thead><tr><th>CAJA</th><th>ESTATUS</th><th>CLIENTE</th><th>VIAJE</th><th>UNIDAD</th><th>COORD</th><th>UBICACIÓN</th><th>DÍAS SIN MOV</th><th>ANÁLISIS AUTOMÁTICO</th></tr></thead>
+      <tbody id="cajbody"><tr><td colspan="7" style="text-align:center;color:#64748b;padding:30px">Carga el archivo de Cajas en 📂 Actualizar Datos</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- WHATSAPP URGENCIAS -->
+<div id="pane-whats" class="pane">
+  <div class="rhdr" style="margin-bottom:12px">
+    <div>
+      <h1>💬 CENTRO DE URGENCIAS — WHATSAPP</h1>
+      <div class="rsub">Pega conversaciones de tus grupos · Detección automática de eventos críticos</div>
+    </div>
+    <div class="rmeta" id="whatsHdr">Sin mensajes</div>
+  </div>
+
+  <!-- KPIs urgencias -->
+  <div class="kr" id="kwhat" style="grid-template-columns:repeat(5,1fr);margin-bottom:12px"></div>
+
+  <!-- Input para pegar mensajes -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="chd">📋 PEGAR MENSAJES DE WHATSAPP
+      <span style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:8px">Copia y pega conversaciones completas de tus grupos</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <textarea id="watxt" rows="6" style="flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:12px;font-family:'Segoe UI',sans-serif;resize:vertical;outline:none;background:#fff" placeholder="Pega aquí los mensajes de WhatsApp...
+
+Ejemplo:
+19/05/2026, 08:32 - Juan Tello: Unidad 370-ABC reporta llanta ponchada en carretera Monterrey-Saltillo km 45
+19/05/2026, 08:35 - Yamileth: 162-ABC choque leve en Chihuahua, sin lesionados
+19/05/2026, 08:40 - Eder: 100-ABC falla de frenos, detenida en patio Ramos Arizpe"></textarea>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button onclick="analizarWA()" style="background:#25D366;color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap">🔍 Analizar</button>
+        <button onclick="limpiarWA()" style="background:#f8f9fa;color:#64748b;border:1px solid #e2e8f0;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:11px">🗑️ Limpiar</button>
+        <select id="waGrupo" style="border:1px solid #e2e8f0;border-radius:8px;padding:6px 8px;font-size:11px;background:#fff">
+          <option value="">Grupo...</option>
+          <option>Flota NAL 1</option>
+          <option>Flota NAL 2</option>
+          <option>Coordinadores</option>
+          <option>Operaciones</option>
+          <option>Emergencias</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros de prioridad -->
+  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="fbtn on" id="wf-ALL" onclick="setWF('ALL',this)">Todos</button>
+    <button class="fbtn" id="wf-CRITICO" onclick="setWF('CRITICO',this)" style="border-color:#e74c3c;color:#e74c3c">🔴 Crítico</button>
+    <button class="fbtn" id="wf-ALTO" onclick="setWF('ALTO',this)" style="border-color:#e67e22;color:#e67e22">🟠 Alto</button>
+    <button class="fbtn" id="wf-MEDIO" onclick="setWF('MEDIO',this)" style="border-color:#f39c12;color:#f39c12">🟡 Medio</button>
+    <button class="fbtn" id="wf-BAJO" onclick="setWF('BAJO',this)" style="border-color:#27ae60;color:#27ae60">🟢 Bajo</button>
+    <button class="fbtn" id="wf-RESUELTO" onclick="setWF('RESUELTO',this)" style="border-color:#95a5a6;color:#95a5a6">✅ Resuelto</button>
+  </div>
+
+  <!-- Lista de urgencias detectadas -->
+  <div class="card">
+    <div class="chd" id="walistlbl">📋 EVENTOS DETECTADOS</div>
+    <div id="walist" style="display:flex;flex-direction:column;gap:8px;max-height:520px;overflow-y:auto">
+      <div style="text-align:center;color:#94a3b8;padding:40px">
+        <div style="font-size:36px">💬</div>
+        <div style="font-size:13px;font-weight:700;margin-top:8px">Sin urgencias registradas</div>
+        <div style="font-size:11px;margin-top:4px">Pega mensajes de WhatsApp arriba para analizar automáticamente</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- MODAL -->
+<div id="modal"><div id="mbox"><button id="mcls" onclick="closeM()">✕</button><div id="mc"></div></div></div>
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA — dinámico desde Sheet
+// ═══════════════════════════════════════════════════════
+let D = {
+  fecha: new Date().toISOString().substring(0,10),
+  units: [], circs: [], acc: [], multas: [], indis: [],
+  op_rec: [], unit_rec: [], mov_rh: [], cajas: [], urgencias: [],
+  coords: [], rend_tipo: [],
+  K: {
+    total:0, trn:0, vta:0, dco:0, lib:0, so:0, cp:0, sg:0, rm:0, per:0,
+    prod:0, improd:0, prod_pct:0, improd_pct:0, util_pct:0,
+    inc_may:0, acc:0, multas:0, multas_costo:0,
+    rend_avg:0, bajo_rend:0, venta:0, fact_mes:0, util_mes:0, sol_mtto:0
+  }
+};
+
+// ═══ PERSISTENCIA localStorage ═══
+const SK = 'hub_nal_v6';
+function saveStor(){try{localStorage.setItem(SK,JSON.stringify(D));localStorage.setItem(SK+'_ts',new Date().toISOString());}catch(e){}}
+function loadStor(){
+  try{
+    const s=localStorage.getItem(SK);const ts=localStorage.getItem(SK+'_ts');
+    if(!s)return false;
+    const p=JSON.parse(s);const dd=new Date(ts||'2000-01-01');const n=new Date();
+    if(dd.getMonth()===n.getMonth()&&dd.getFullYear()===n.getFullYear()){
+      D=p;
+      if(!D.cajas)D.cajas=[];
+  if(!D.urgencias)D.urgencias=[];
+      const b=document.getElementById('sbanner');const t=document.getElementById('sbtxt');
+      if(b&&t){t.textContent='Última actualización: '+dd.toLocaleDateString('es-MX',{day:'2-digit',month:'short'})+' '+dd.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});b.style.display='flex';}
+      const br=document.getElementById('brandNm');
+      if(br&&D.units&&D.units.length)br.textContent='HUB OPERATIVO · ABC XIMPLE · '+D.units.length+' UNIDADES';
+      return true;
+    }
+  }catch(e){}return false;
+}
+function clearStor(){localStorage.removeItem(SK);localStorage.removeItem(SK+'_ts');location.reload();}
+
+// ═══ HELPERS ═══
+const fM=n=>n==null?'—':'$'+Number(n).toLocaleString('es-MX',{minimumFractionDigits:0,maximumFractionDigits:0});
+const fN=n=>n==null?'—':Number(n).toLocaleString('es-MX',{minimumFractionDigits:0,maximumFractionDigits:0});
+const CLBL={TRN:'EN TRÁNSITO',VTA:'FACTURANDO',DCO:'DISPO C/OP',DSO:'DISPO S/OP',LIB:'POR LIBERAR',SO:'SIN OPERADOR',CP:'CORRECTIVO',SG:'SINIESTRO',RM:'REP. MAYOR',PER:'PERMISO',SGR:'SENSORES GPS'};
+const CCLS={TRN:'bgg',VTA:'bgb',DCO:'bgx',LIB:'bgy',SO:'bgr',CP:'bgo',SG:'bgp',RM:'bgr',PER:'bgx',DSO:'bgx',SGR:'bgx'};
+const bg=(c,l)=>`<span class="bg ${CCLS[c]||'bgx'}">${l||CLBL[c]||c}</span>`;
+let FILTER='ALL';
+const r2=n=>Math.round(n*100)/100;
+const r1=n=>Math.round(n*10)/10;
+
+// ═══ GOOGLE SHEETS CONFIG ═══
+// ⚙️ CONFIGURA AQUÍ TU URL DE APPS SCRIPT (una vez publicado)
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzl_SfMTu2LjF1C15Kqhf8nmBiRnLtUWy6GGoUr24RptrpfpYPtaAkkyh6IwLTM-VKmZA/exec';
+let SHEET_ID = '1Ozxdr-V67f-IsaBBb7Jqp9LETwRrFm0widhoqt-2axs'; // <- ID de tu Sheet
+
+// ── Aplica datos recibidos del Sheet al estado global D ───────────────────
+function applySheetData(data){
+  // ── Unidades del estatus diario ──────────────────────────────────
+  if(data.units&&data.units.length){
+    D.units=data.units;
+  }
+  // ── Data financiero: enriquecer unidades con fact/util/circ ─────
+  if(data.data){
+    const byUnit=data.data.byUnit||{};
+    D.units=(D.units||[]).map(u=>({
+      ...u,
+      fact: byUnit[u.u]?.fact||u.fact||0,
+      util: byUnit[u.u]?.util||u.util||0,
+      circ: byUnit[u.u]?.circ||u.circ||'—',
+    }));
+    if(data.data.circs&&data.data.circs.length)D.circs=data.data.circs;
+    if(data.data.byCoord&&data.data.byCoord.length)D.byCoord=data.data.byCoord;
+    if(data.data.kpis)D.kpis_mes=data.data.kpis;
+  }
+  // ── Cajas ────────────────────────────────────────────────────────
+  if(data.cajas&&data.cajas.length)D.cajas=data.cajas;
+  // ── Operadores ───────────────────────────────────────────────────
+  if(data.operadores&&data.operadores.length)D.operadores=data.operadores;
+  // ── Urgencias del Sheet ──────────────────────────────────────────
+  if(data.urgencias&&data.urgencias.length){
+    D.urgencias=data.urgencias.map((u,i)=>({
+      id:Date.now()+i,
+      hora:u.hora||'',remite:u.coord||u.operador||'Sheet',
+      grupo:u.tipo||'Urgencias',
+      texto:u.problema||'',
+      unidad:u.unidad||'—',caja:u.caja||'—',
+      operador:u.operador||'—',
+      coord:u.coord||'',
+      cliente:u.cliente||'',
+      tipo:u.tipo||'',
+      prioridad:detectarPrioridad(u.problema||'').prioridad,
+      categoria:u.tipo||detectarPrioridad(u.problema||'').categoria,
+      estatus:u.estatus||'Abierto',
+      resuelto:u.resuelto||'No',
+      pendiente:u.pendiente||'Sí',
+      seguimiento:u.seguimiento||'',
+      ts:Date.now()
+    })).filter(u=>u.texto);
+  }
+  D.fecha=data.fecha||new Date().toISOString().substring(0,10);
+  recalcK();saveStor();
+  // Actualizar UI
+  bDash();renderGrid(D.units);
+  const br=document.getElementById('brandNm');
+  if(br)br.textContent='HUB OPERATIVO · ABC XIMPLE · '+D.units.length+' UNIDADES';
+  const fh=document.getElementById('fhdr');
+  if(fh)fh.textContent='📅 '+new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  const hora=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const t=document.getElementById('sbtxt');const b2=document.getElementById('sbanner');
+  if(t)t.textContent='Última sync: '+hora+' · '+D.units.length+' uds';
+  if(b2)b2.style.display='flex';
+  // Actualizar tab activo si está abierto
+  const panes=['flota','mens','cajas','whats'];
+  panes.forEach(p=>{const el=document.getElementById('pane-'+p);if(el&&el.classList.contains('active')){const map={flota:bFlota,mens:bMens,cajas:bCajas,whats:bWhats};if(map[p])map[p]();}});
+}
+
+// ── JSONP fallback para cuando fetch falla por CORS ───────────────────────
+function syncViaScript(){
+  return new Promise((resolve,reject)=>{
+    if(window._hubCbTimer)clearTimeout(window._hubCbTimer);
+    window.hubCallback=function(data){
+      if(window._hubScript){window._hubScript.remove();delete window._hubScript;}
+      if(data&&data.ok)applySheetData(data);
+      resolve();
+    };
+    window._hubCbTimer=setTimeout(()=>{
+      if(window._hubScript){window._hubScript.remove();delete window._hubScript;}
+      reject(new Error('timeout'));
+    },15000);
+    const s=document.createElement('script');
+    s.src=SHEETS_URL+'?action=all&callback=hubCallback&t='+Date.now();
+    s.onerror=()=>reject(new Error('script error'));
+    window._hubScript=s;document.head.appendChild(s);
+  });
+}
+
+// ── Sync principal con fallback JSONP ─────────────────────────────────────
+async function syncSheet(){
+  if(!SHEETS_URL)return;
+  const btn=document.getElementById('syncBtn');
+  if(btn){btn.textContent='⏳ Sync...';btn.disabled=true;}
+  try{
+    const resp=await fetch(SHEETS_URL+'?action=all&t='+Date.now(),{method:'GET',redirect:'follow'});
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    if(data&&data.ok){
+      applySheetData(data);
+      toast('✅ '+D.units.length+' unidades · '+(D.cajas||[]).length+' cajas · '+new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}));
+    } else {
+      toast('⚠️ '+(data&&data.error?data.error:'Sin datos del script'));
+    }
+  }catch(e){
+    // Intento JSONP
+    try{
+      await syncViaScript();
+      toast('✅ Sync OK vía JSONP · '+D.units.length+' uds');
+    }catch(e2){
+      toast('❌ Sin conexión. Verifica: Apps Script → Implementar → Acceso: Cualquier persona');
+    }
+  }finally{
+    if(btn){btn.textContent='🔄 Sync Sheet';btn.disabled=false;}
+    resetCountdown();
+  }
+}
+
+// ── Countdown: auto-refresh cada 2 minutos ────────────────────────────────
+let _cdVal=120,_cdTimer=null;
+function resetCountdown(){
+  if(_cdTimer)clearInterval(_cdTimer);
+  _cdVal=120;
+  _cdTimer=setInterval(()=>{
+    _cdVal--;
+    const b=document.getElementById('syncBtn');
+    if(b&&!b.disabled)b.title='Auto-sync en '+_cdVal+'s';
+    if(_cdVal<=0){_cdVal=120;syncSheet();}
+  },1000);
+}
+
+// Auto-refresh al cargar si hay URL
+let autoRefreshInterval=null;
+function startAutoRefresh(){
+  if(SHEETS_URL){
+    syncSheet();       // sync inmediato al abrir
+    resetCountdown();  // luego cada 2 min
+  }
+}
+
+// ═══ CLOCK ═══
+setInterval(()=>{
+  const d=new Date();
+  const e=document.getElementById('clock');
+  if(e)e.textContent=d.toLocaleDateString('es-MX',{weekday:'short',day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const e2=document.getElementById('hhdr');
+  if(e2)e2.textContent=d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})+' hrs';
+},1000);
+
+// ═══ TABS ═══
+function go(id,btn){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  const p=document.getElementById('pane-'+id);if(p)p.classList.add('on');
+  if(btn)btn.classList.add('on');
+  const map={flota:bFlota,inc:bInc,rend:bRend,mtto:bMtto,seg:bSeg,circ:bCirc,mens:bMens,cajas:bCajas,whats:bWhats};
+  if(map[id])map[id]();
+}
+
+// ═══ UPLOAD ═══
+const LF={};
+function openU(){document.getElementById('uPanel').classList.add('open');}
+function closeU(){document.getElementById('uPanel').classList.remove('open');}
+function tf(k){document.getElementById('fi-'+k).click();}
+function fl(k,inp){
+  if(!inp.files[0])return;
+  LF[k]=inp.files[0];
+  const uiKey=k.replace('inc2','inc').replace('rend2','rend');
+  const row=document.getElementById('fr-'+uiKey);
+  const st=document.getElementById('fs-'+uiKey);
+  if(row)row.classList.add('loaded');
+  if(st){st.textContent='✓ '+inp.files[0].name.substring(0,26);st.style.color='#27ae60';}
+  document.getElementById('procBtn').disabled=false;
+}
+
+function processAll(){
+  const keys=Object.keys(LF);
+  if(!keys.length){document.getElementById('uMsg').textContent='⚠ Selecciona al menos un archivo.';return;}
+  if(!window.XLSX){document.getElementById('uMsg').textContent='⏳ Cargando librería XLSX...';setTimeout(processAll,2000);return;}
+  const btn=document.getElementById('procBtn');
+  btn.disabled=true;btn.textContent='⏳ Procesando...';
+  document.getElementById('uMsg').textContent='';
+  let done=0;const total=keys.length;const res={};
+  keys.forEach(k=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        res[k]=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+        done++;document.getElementById('uMsg').textContent=`Procesando ${done}/${total}...`;
+        if(done===total)applyData(res,btn);
+      }catch(err){
+        document.getElementById('uMsg').textContent='❌ Error en '+k;
+        btn.disabled=false;btn.textContent='⚡ Procesar y Actualizar';
+      }
+    };
+    reader.readAsArrayBuffer(LF[k]);
+  });
+}
+
+function findCol(keys,...searches){for(const s of searches){const terms=Array.isArray(s)?s:[s];const f=keys.find(k=>terms.every(t=>k.toLowerCase().includes(t.toLowerCase())));if(f)return f;}return null;}
+
+function applyData(res,btn){
+  let changed=false;
+
+  // ESTATUS DIARIO — Columnas exactas: Fecha,Unidad,Operador,UnidadDeNegocio,
+  //   Estatus,Motivo,FechaCompromisoUnidad,FechaCompromisoOperador,NombreRuta,Monto,Coordinador,Comentarios
+  if(res.est&&res.est.length){
+    const rows=res.est;const s=rows[0];const ks=Object.keys(s);
+    // Buscar columnas por nombre exacto primero, luego flexible
+    function gc(exact,fallbacks){
+      if(s.hasOwnProperty(exact))return exact;
+      return findCol(ks,...fallbacks)||exact;
+    }
+    const cU    =gc('Unidad',    [['unidad'],['economico']]);
+    const cUdN  =gc('UnidadDeNegocio',[['negocio'],['empresa']]);
+    const cOp   =gc('Operador',  [['operador']]);
+    const cMot  =gc('Motivo',    [['motivo'],['movimiento']]);
+    const cRuta =gc('NombreRuta',[['ruta'],['destino']]);
+    const cMonto=gc('Monto',     [['monto'],['venta'],['importe']]);
+    const cCoord=gc('Coordinador',[['coordinador']]);
+    const cObs  =gc('Comentarios',[['comentario'],['observacion']]);
+    const cEst  =gc('Estatus',   [['estatus'],['estado']]);
+    const cFCU  =gc('FechaCompromisoUnidad',[['compromiso','unidad'],['fecha','unidad']]);
+    const cFCO  =gc('FechaCompromisoOperador',[['compromiso','op'],['fecha','op']]);
+
+    // Filtrar solo NAL y solo fecha más reciente del archivo
+    let nalRows=rows.filter(r=>{
+      const uid=String(r[cU]||'').trim();
+      if(!uid||uid.length<3)return false;
+      const neg=String(r[cUdN]||'').toLowerCase();
+      return !neg||neg.includes('nacional')||neg.includes('nal');
+    });
+
+    // Si hay múltiples fechas, quedarse solo con la más reciente
+    const fechas=nalRows.map(r=>String(r['Fecha']||r[Object.keys(s)[0]]||'')).filter(Boolean);
+    if(fechas.length>0){
+      const maxF=fechas.sort().reverse()[0];
+      const filtFecha=nalRows.filter(r=>{
+        const f=String(r['Fecha']||r[Object.keys(s)[0]]||'');
+        return !f||f===maxF||f.startsWith(maxF.substring(0,10));
+      });
+      if(filtFecha.length>0)nalRows=filtFecha;
+    }
+
+    // Extrae code del campo Motivo exacto del Sheet
+    // Formato: "VTA - Facturando", "TRN - En Transito", "LIB - Por Liberar", etc.
+    function extractCode(mot,estRaw){
+      const m=(mot||'').trim().toUpperCase();
+      const e=(estRaw||'').trim().toUpperCase();
+      // Primero buscar por inicio del texto (el code siempre es los primeros chars)
+      const codes=['TRN','VTA','LIB','DCO','DSO','SGR','SO','CP','SG','RM','PER'];
+      for(const c of codes){
+        if(m.startsWith(c+' ')||m.startsWith(c+'-')||m===c)return c;
+      }
+      // Fallback: buscar en la columna Estatus
+      if(e.includes('TRANSITO')||e.includes('TRÁNSITO'))return'TRN';
+      if(e.includes('FACTURAND')||e.includes('VENTA'))return'VTA';
+      if(e.includes('LIBERAR'))return'LIB';
+      if(e.includes('DISPONIB'))return'DCO';
+      if(e.includes('SIN OPER'))return'SO';
+      if(e.includes('CORRECTIV'))return'CP';
+      if(e.includes('SINIESTRO'))return'SG';
+      if(e.includes('REPARAC'))return'RM';
+      if(e.includes('PERMISO'))return'PER';
+      return'DCO';
+    }
+
+    const newUnits=[];
+    nalRows.forEach(r=>{
+      const uid=String(r[cU]||'').trim();if(!uid)return;
+      const mot=String(r[cMot]||'').trim();
+      const estRaw=String(r[cEst]||'').trim();
+      // Si motivo vacío pero estatus tiene info, inferir code del estatus
+      let code=extractCode(mot,estRaw);
+      if(false){
+        if(estRaw==='EnManteimiento'||estRaw==='EnMantenimiento')code='CP';
+        else if(estRaw==='ConProblemas')code='SO';
+        else if(estRaw==='Disponible')code='DCO';
+        else if(estRaw==='Operando')code='TRN';
+      }
+      const existing=D.units.find(x=>x.u===uid)||{rv:null,kms:null,lit:null,vmax:null,rel:null,rf:'ok',inc:0,ilist:[],mtto:[],fact:0,util:0,circ:'—',tu:'Tractor'};
+      const monto=parseFloat(String(r[cMonto]||'0').replace(/[$,\s]/g,''))||0;
+      newUnits.push({
+        ...existing,
+        u:uid,code,motivo:mot||estRaw,
+        estatus_raw:estRaw,
+        op:String(r[cOp]||'').trim()||'SIN ASIGNAR',
+        ruta:String(r[cRuta]||'').trim(),
+        monto:monto,
+        coord:String(r[cCoord]||'').trim()||'—',
+        obs:String(r[cObs]||'').substring(0,100),
+        fechaCompU:String(r[cFCU]||'').substring(0,10),
+        fechaCompO:String(r[cFCO]||'').substring(0,10),
+      });
+    });
+    if(newUnits.length>0){
+      D.units=newUnits;
+      const b=document.getElementById('brandNm');
+      if(b)b.textContent='HUB OPERATIVO · ABC XIMPLE · '+D.units.length+' UNIDADES';
+    }
+    recalcK();changed=true;
+  }
+
+  // RENDIMIENTOS
+  if(res.rend2&&res.rend2.length){
+    const rows=res.rend2;const s=rows[0];const ks=Object.keys(s);
+    const cU=findCol(ks,['economico'],['unidad'])||'Numero Economico';
+    const cR=findCol(ks,['rendimiento','calc'],['rendimiento'])||'Rendimiento Calculado';
+    const cK=findCol(ks,['km','recorrido'],['kms'])||'Kms Recorridos';
+    const cL=findCol(ks,['litro'])||'Litros Carga';
+    const cV=findCol(ks,['velocidad','max'])||'Velocidad Maxima';
+    const cRel=findCol(ks,['relenti'])||'Porcentaje Relenti';
+    rows.forEach(r=>{
+      const uid=String(r[cU]||'').trim();
+      const u=D.units.find(x=>x.u===uid);
+      if(u){
+        const rv=parseFloat(String(r[cR]||'').replace(',','.'));
+        if(!isNaN(rv)&&rv>0){u.rv=r2(rv);u.rf=rv<2?'critico':rv<2.5?'bajo':'ok';}
+        const km=parseFloat(r[cK]);if(!isNaN(km)&&km>=0)u.kms=r1(km);
+        const lt=parseFloat(r[cL]);if(!isNaN(lt)&&lt>=0)u.lit=r1(lt);
+        const vm=parseFloat(r[cV]);if(!isNaN(vm))u.vmax=r1(vm);
+        const re=parseFloat(r[cRel]);if(!isNaN(re))u.rel=r1(re);
+      }
+    });
+    const rvs=D.units.filter(u=>u.rv&&u.rv>0.5&&u.rv<9).map(u=>u.rv);
+    if(rvs.length)D.rend_avg=r2(rvs.reduce((a,b)=>a+b,0)/rvs.length);
+    D.K.rend_avg=D.rend_avg;D.K.bajo_rend=D.units.filter(u=>u.rf==='critico').length;
+    changed=true;
+  }
+
+  // SOLICITUDES MTTO
+  if(res.sol&&res.sol.length){
+    const rows=res.sol;const s=rows[0];const ks=Object.keys(s);
+    const cU=findCol(ks,['economico'],['unidad'])||'NumeroEconomico';
+    const cF=findCol(ks,['solicitud'],['folio'])||'SolicitudServicio';
+    const cD=findCol(ks,['descripcion'],['falla'])||'Descripcion';
+    const cFec=findCol(ks,['fecha'])||'FechaSolicitud';
+    const cE=findCol(ks,['estatus'])||'Estatus';
+    D.units.forEach(u=>u.mtto=[]);
+    rows.forEach(r=>{
+      const uid=String(r[cU]||'').trim();
+      const u=D.units.find(x=>x.u===uid);
+      if(u)u.mtto.push({folio:r[cF]||'',desc:String(r[cD]||'').substring(0,60),fecha:String(r[cFec]||'').substring(0,10),estatus:String(r[cE]||'')});
+    });
+    D.K.sol_mtto=D.units.reduce((s,u)=>s+(u.mtto?u.mtto.length:0),0);
+    changed=true;
+  }
+
+  // INCIDENCIAS — solo unidades NAL del mes actual
+  if(res.inc2&&res.inc2.length){
+    const rows=res.inc2;const s=rows[0];const ks=Object.keys(s);
+    const cU=findCol(ks,['unidad'],['economico'])||'Unidad';
+    const cOp=findCol(ks,['operador'])||'Operador';
+    const cFec=findCol(ks,['fecha','incidencia'],['fecha'])||'FechaIncidencia';
+    const cTipo=findCol(ks,['tipo'])||'Tipo';
+    const cSub=findCol(ks,['subtipo'])||'SubTipo';
+    const cPri=findCol(ks,['prioridad'])||'Prioridad';
+    const cEst=findCol(ks,['estatus','nombre'],['estatus'])||'EstatusNombre';
+    const cCst=findCol(ks,['costo'],['monto'])||'Costo';
+    const cDesc=findCol(ks,['descripcion'])||'Descripcion';
+    const cLug=findCol(ks,['lugar'],['ubicacion'])||'LugarEvento';
+    const now=new Date();const thisM=now.getMonth()+1;const thisY=now.getFullYear();
+    D.units.forEach(u=>{u.ilist=[];u.inc=0;});
+    D.acc=[];D.multas=[];D.indis=[];
+    rows.forEach(r=>{
+      const uid=String(r[cU]||'').trim();
+      const u=D.units.find(x=>x.u===uid);
+      let fecha='';
+      try{const fd=new Date(String(r[cFec]||''));if(!isNaN(fd)){if(fd.getMonth()+1!==thisM||fd.getFullYear()!==thisY)return;fecha=fd.toISOString().substring(0,10);}}catch(e){return;}
+      const tipo=String(r[cTipo]||'');
+      const inc={folio:String(r['Folio']||''),fecha,tipo,subtipo:String(r[cSub]||''),
+        prioridad:String(r[cPri]||''),estatus:String(r[cEst]||''),
+        costo:parseFloat(String(r[cCst]||'0').replace(/[$,]/g,''))||0,
+        desc:String(r[cDesc]||'').substring(0,100),lugar:String(r[cLug]||'').substring(0,70),op:String(r[cOp]||'')};
+      if(u){u.ilist.push(inc);u.inc=u.ilist.length;}
+      if(tipo==='Accidente')D.acc.push({...inc,unidad:uid});
+      if(tipo==='Multa')D.multas.push({...inc,unidad:uid});
+      if(tipo==='Indisciplinas')D.indis.push({...inc,unidad:uid});
+    });
+    const opC={},unitC={};
+    D.units.forEach(u=>{u.ilist.forEach(i=>{opC[i.op]=(opC[i.op]||0)+1;});if(u.inc)unitC[u.u]=(unitC[u.u]||0)+u.inc;});
+    D.op_rec=Object.entries(opC).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([op,n])=>({op,n}));
+    D.unit_rec=Object.entries(unitC).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([u,n])=>({u,n}));
+    D.K.inc_may=D.units.reduce((s,u)=>s+u.inc,0);
+    D.K.acc=D.acc.length;D.K.multas=D.multas.length;
+    D.K.multas_costo=D.multas.reduce((s,m)=>s+m.costo,0);
+    changed=true;
+  }
+
+  // MOVIMIENTOS RH
+  if(res.mov&&res.mov.length){
+    const rows=res.mov;const s=rows[0];const ks=Object.keys(s);
+    const cTipo=findCol(ks,['tipo'],['concepto'])||'Tipo';
+    const cMnt=findCol(ks,['monto'],['importe'])||'Monto';
+    const cFec=findCol(ks,['fecha'])||'FechaSolicitud';
+    const now=new Date();const thisM=now.getMonth()+1;const thisY=now.getFullYear();
+    const map={};
+    rows.forEach(r=>{
+      try{const fd=new Date(String(r[cFec]||''));if(!isNaN(fd)&&(fd.getMonth()+1!==thisM||fd.getFullYear()!==thisY))return;}catch(e){}
+      const tipo=String(r[cTipo]||'').trim();if(!tipo)return;
+      const monto=parseFloat(String(r[cMnt]||'0').replace(/[$,]/g,''))||0;
+      if(!map[tipo])map[tipo]={tipo,cant:0,monto:0};
+      map[tipo].cant++;map[tipo].monto=r2(map[tipo].monto+monto);
+    });
+    D.mov_rh=Object.values(map).sort((a,b)=>b.monto-a.monto);
+    changed=true;
+  }
+
+  // CAJAS
+  if(res.caj&&res.caj.length){
+    const rows=res.caj;const s=rows[0];const ks=Object.keys(s);
+    const cNum=findCol(ks,['caja'],['numero'],['num'])||ks[0];
+    const cEst=findCol(ks,['estatus'],['estado'],['status'])||'Estatus';
+    const cCli=findCol(ks,['cliente'])||'Cliente';
+    const cViaje=findCol(ks,['viaje'],['folio'],['orden'])||'Viaje';
+    const cOp=findCol(ks,['operador'])||'Operador';
+    const cUbic=findCol(ks,['ubicacion'],['ciudad'],['lugar'],['destino'])||'Ubicacion';
+    const cAct=findCol(ks,['actualizacion'],['fecha'],['ultima'])||ks[ks.length-1];
+    D.cajas=rows.map(r=>{
+      const num=String(r[cNum]||'').trim();
+      const est=String(r[cEst]||'').trim();
+      const act=r[cAct];
+      const diasSinMov=act instanceof Date?Math.floor((new Date()-act)/86400000):null;
+      return{
+        num,estatus:est,
+        cliente:String(r[cCli]  ||'').trim(),
+        viaje:  String(r[cViaje]||'').trim(),
+        op:     String(r[cOp]   ||'').trim(),
+        ubicacion:String(r[cUbic]||'').trim(),
+        actualizado:String(r[cAct]||'').substring(0,16),
+        diasSinMov,
+        analisis:generarAnalisisCajaJS(est,diasSinMov,{}),
+      };
+    }).filter(r=>r.num&&r.num.length>0);
+    changed=true;
+  }
+
+  // DATA — fuente financiera del mes
+  if(res.data&&res.data.length){
+    // Procesar base Data igual que el Apps Script
+    const dh=Object.keys(res.data[0]);
+    const dCirc =findCol(dh,['circuito'],['Circuito'],['ruta']);
+    const dUnid =findCol(dh,['economico'],['Unidad'],['unidad']);
+    const dCoord=findCol(dh,['coordinador'],['Coordinador']);
+    const dFact =findCol(dh,['facturacion'],['Facturacion'],['venta'],['Venta']);
+    const dUtil =findCol(dh,['utilidad'],['Utilidad'],['util']);
+    const dKmsC =findCol(dh,['kmscargados'],['km cargado'],['kms carg']);
+    const dKmsV =findCol(dh,['kmsvacio'],['km vacio']);
+    const dViaj =findCol(dh,['viajes'],['Viajes']);
+    const dataRows2=res.data.filter(r=>{const u=String(r[dUnid]||'').trim();return u&&u.toUpperCase()!=='TOTAL'&&u.toUpperCase()!=='UNIDAD';});
+    // Circuitos
+    const cMap2={};
+    dataRows2.forEach(r=>{
+      const c=String(r[dCirc]||'Sin Circuito').trim();
+      if(!cMap2[c])cMap2[c]={circ:c,uds:new Set(),fact:0,util:0,kmsC:0,kmsV:0,viajes:0};
+      const u=String(r[dUnid]||'').trim();if(u)cMap2[c].uds.add(u);
+      cMap2[c].fact+=parseFloat(String(r[dFact]||'0').replace(/[$,]/g,''))||0;
+      cMap2[c].util+=parseFloat(String(r[dUtil]||'0').replace(/[$,]/g,''))||0;
+      cMap2[c].kmsC+=parseFloat(String(r[dKmsC]||'0').replace(/[$,]/g,''))||0;
+      cMap2[c].kmsV+=parseFloat(String(r[dKmsV]||'0').replace(/[$,]/g,''))||0;
+      cMap2[c].viajes+=parseFloat(String(r[dViaj]||'1'))||1;
+    });
+    D.circs=Object.values(cMap2).filter(c=>c.fact||c.util).map(c=>({
+      circ:c.circ,uds:c.uds.size,fact:Math.round(c.fact),util:Math.round(c.util),
+      util_ud:c.uds.size?Math.round(c.util/c.uds.size):0,
+      kmsC:Math.round(c.kmsC),kmsV:Math.round(c.kmsV),viajes:c.viajes,
+      margen:c.fact?Math.round(c.util/c.fact*1000)/10:0,
+    }));
+    // Por coordinador
+    const ccMap={};
+    dataRows2.forEach(r=>{
+      const c=String(r[dCoord]||'').trim();if(!c)return;
+      if(!ccMap[c])ccMap[c]={coord:c,fact:0,util:0,kmsC:0,kmsV:0,viajes:0,uds:new Set(),cajas:0};
+      ccMap[c].fact+=parseFloat(String(r[dFact]||'0').replace(/[$,]/g,''))||0;
+      ccMap[c].util+=parseFloat(String(r[dUtil]||'0').replace(/[$,]/g,''))||0;
+      ccMap[c].kmsC+=parseFloat(String(r[dKmsC]||'0').replace(/[$,]/g,''))||0;
+      ccMap[c].viajes+=parseFloat(String(r[dViaj]||'1'))||1;
+      const u=String(r[dUnid]||'').trim();if(u)ccMap[c].uds.add(u);
+    });
+    D.byCoord=Object.values(ccMap).filter(c=>c.fact||c.util).map(c=>({
+      coord:c.coord,fact:Math.round(c.fact),util:Math.round(c.util),
+      margen:c.fact?Math.round(c.util/c.fact*1000)/10:0,
+      kmsC:Math.round(c.kmsC),kmsV:Math.round(c.kmsV),viajes:c.viajes,
+      uds:c.uds.size,cajas:c.cajas,
+    }));
+    // KPIs globales del mes
+    D.kpis_mes={
+      fact_mes: Math.round(dataRows2.reduce((s,r)=>s+(parseFloat(String(r[dFact]||'0').replace(/[$,]/g,''))||0),0)),
+      util_mes: Math.round(dataRows2.reduce((s,r)=>s+(parseFloat(String(r[dUtil]||'0').replace(/[$,]/g,''))||0),0)),
+      kmsC_mes: Math.round(dataRows2.reduce((s,r)=>s+(parseFloat(String(r[dKmsC]||'0').replace(/[$,]/g,''))||0),0)),
+      kmsV_mes: Math.round(dataRows2.reduce((s,r)=>s+(parseFloat(String(r[dKmsV]||'0').replace(/[$,]/g,''))||0),0)),
+      viajes_mes:Math.round(dataRows2.reduce((s,r)=>s+(parseFloat(String(r[dViaj]||'1'))||1),0)),
+    };
+    // Enriquecer unidades con fact/util de Data
+    const byUnit2={};
+    dataRows2.forEach(r=>{
+      const u=String(r[dUnid]||'').trim();if(!u)return;
+      if(!byUnit2[u])byUnit2[u]={fact:0,util:0,circ:''};
+      byUnit2[u].fact+=parseFloat(String(r[dFact]||'0').replace(/[$,]/g,''))||0;
+      byUnit2[u].util+=parseFloat(String(r[dUtil]||'0').replace(/[$,]/g,''))||0;
+      if(r[dCirc])byUnit2[u].circ=String(r[dCirc]).trim();
+    });
+    D.units=(D.units||[]).map(u=>({
+      ...u,
+      fact:byUnit2[u.u]?.fact||u.fact||0,
+      util:byUnit2[u.u]?.util||u.util||0,
+      circ:byUnit2[u.u]?.circ||u.circ||'—',
+    }));
+    changed=true;
+  }
+
+  // DATA/CIRCUITOS (legacy — por si el archivo se sube como 'data' directo)
+  if(false&&res.data&&res.data.length){
+    const rows=res.data;const s=rows[0];const ks=Object.keys(s);
+    const cCirc=findCol(ks,['circuito'])||'Circuito/Unidad';
+    const cNum=findCol(ks,['economico'])||'NumeroEconomico';
+    const cFact=findCol(ks,['facturacion'],['venta'])||'Facturación';
+    const cUtil=findCol(ks,['utilidad'])||'Utilidad';
+    const cUtilUd=findCol(ks,['utilidad','unidad'],['util/u'])||'Utilidad por unidad';
+    const cUds=findCol(ks,['unidades'])||'Unidades';
+    const cKms=findCol(ks,['distancia'],['km'])||'Distancia Km';
+    const cRend=findCol(ks,['rend'])||'Rend.';
+    rows.forEach(r=>{
+      const uid=String(r[cNum]||'').trim();
+      if(uid==='Total'||!uid)return;
+      const u=D.units.find(x=>x.u===uid);
+      if(u){
+        const fact=parseFloat(String(r[cFact]||'0').replace(/[$,]/g,''));
+        const util=parseFloat(String(r[cUtil]||'0').replace(/[$,]/g,''));
+        const circ=String(r[cCirc]||'').trim();
+        if(!isNaN(fact)&&fact!==0)u.fact=r2(fact);
+        if(!isNaN(util))u.util=r2(util);
+        if(circ)u.circ=circ;
+      }
+    });
+    const circMap={};
+    rows.forEach(r=>{
+      if(String(r[cNum]||'').trim()!=='Total')return;
+      const circ=String(r[cCirc]||'').trim();if(!circ)return;
+      const fact=parseFloat(String(r[cFact]||'0').replace(/[$,]/g,''));
+      const util=parseFloat(String(r[cUtil]||'0').replace(/[$,]/g,''));
+      const util_ud=parseFloat(String(r[cUtilUd]||'0').replace(/[$,]/g,''));
+      const uds=parseInt(r[cUds]||'0');
+      const kms=parseFloat(String(r[cKms]||'0').replace(/[$,]/g,''));
+      const rend=parseFloat(String(r[cRend]||'0').replace(',','.'));
+      if(!isNaN(fact))circMap[circ]={circ,uds:isNaN(uds)?0:uds,fact:r2(fact),util:isNaN(util)?0:r2(util),util_ud:isNaN(util_ud)?0:r2(util_ud),kms:isNaN(kms)?0:r2(kms),rend:isNaN(rend)?0:r2(rend)};
+    });
+    if(Object.keys(circMap).length>0)D.circs=Object.values(circMap);
+    const tf=D.units.reduce((s,u)=>s+(u.fact||0),0);
+    const tu=D.units.reduce((s,u)=>s+(u.util||0),0);
+    if(tf>0){D.K.fact_mes=r2(tf);D.K.util_mes=r2(tu);}
+    // Recalc coords after fact update
+    recalcCoords();
+    changed=true;
+  }
+
+  if(!changed){document.getElementById('uMsg').textContent='⚠ No se detectaron cambios.';btn.disabled=false;btn.textContent='⚡ Procesar y Actualizar';return;}
+
+  D.fecha=new Date().toISOString().substring(0,10);
+  const fh=document.getElementById('fhdr');
+  if(fh)fh.textContent='📅 '+new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  saveStor();
+  bDash();renderGrid(D.units);
+  btn.disabled=false;btn.textContent='⚡ Procesar y Actualizar';
+  // Reset
+  ['est','inc2','rend2','sol','data','mov','caj'].forEach(k=>{
+    delete LF[k];
+    const fi=document.getElementById('fi-'+k);if(fi)fi.value='';
+    const key=k.replace('inc2','inc').replace('rend2','rend');
+    const row=document.getElementById('fr-'+key);if(row)row.classList.remove('loaded');
+    const st=document.getElementById('fs-'+key);if(st){st.textContent='Sin cargar';st.style.color='#94a3b8';}
+  });
+  closeU();
+  toast('✅ Datos actualizados — '+D.units.length+' unidades NAL procesadas · Guardados automáticamente');
+}
+
+
+// ═══ SUGERENCIAS AUTOMÁTICAS ═══
+function generarSugerencias(us, circs, K){
+  const sug=[];
+
+  // Flota sin movimiento (DCO > comentarios)
+  const sinMov=us.filter(u=>['DCO','DSO','LIB'].includes(u.code));
+  sinMov.forEach(u=>{
+    if(u.obs&&(u.obs.toLowerCase().includes('sin caja')||u.obs.toLowerCase().includes('arteaga')||u.obs.toLowerCase().includes('disponible'))){
+      sug.push({tipo:'flota',prioridad:'MEDIO',
+        texto:`${u.u} — ${u.code}: "${u.obs.substring(0,60)}" · Coord: ${u.coord||'—'}`,
+        accion:'Asignar carga o programar viaje de posicionamiento'});
+    }
+  });
+
+  // Sin operador
+  const soUs=us.filter(u=>u.code==='SO');
+  if(soUs.length>5)sug.push({tipo:'flota',prioridad:'ALTO',
+    texto:`${soUs.length} unidades SIN OPERADOR — impacto: ${r2(soUs.length/K.total*100)}% de la flota improductiva`,
+    accion:'Activar reclutamiento urgente — revisar vacantes abiertas'});
+
+  // Circuitos en pérdida
+  const loss=circs.filter(c=>c.util<0).sort((a,b)=>a.util-b.util);
+  loss.slice(0,3).forEach(c=>{
+    const margen=c.fact?r2(c.util/c.fact*100):0;
+    sug.push({tipo:'circuito',prioridad:c.util<-50000?'CRITICO':'ALTO',
+      texto:`Circuito "${c.circ}" — Pérdida ${fM(c.util)} · Margen ${margen}%`,
+      accion:`Revisar tarifas o reasignar unidades. Util/ud: ${fM(c.util_ud)}`});
+  });
+
+  // Margen bajo en circuitos (>0 pero <5%)
+  circs.filter(c=>c.fact>0&&c.util>=0&&c.util/c.fact<0.05).forEach(c=>{
+    sug.push({tipo:'circuito',prioridad:'MEDIO',
+      texto:`"${c.circ}" — Margen crítico ${r2(c.util/c.fact*100)}% · ${c.uds||'?'} uds`,
+      accion:'Renegociar tarifa o reducir costos operativos'});
+  });
+
+  // Bajo rendimiento
+  const bajos=us.filter(u=>u.rv&&u.rv>0&&u.rv<2.0);
+  if(bajos.length>0)sug.push({tipo:'mantenimiento',prioridad:'ALTO',
+    texto:`${bajos.length} unidades con rendimiento crítico (<2.0 km/L): ${bajos.slice(0,4).map(u=>u.u).join(', ')}`,
+    accion:'Programar revisión mecánica urgente — posible fuga o sistema de combustible'});
+
+  // Siniestros sin resolver
+  const sg=us.filter(u=>u.code==='SG');
+  if(sg.length)sug.push({tipo:'seguridad',prioridad:'ALTO',
+    texto:`${sg.length} siniestro(s) activo(s): ${sg.map(u=>u.u).join(', ')}`,
+    accion:'Gestionar cierre con aseguradora — cada día suma costo improductivo'});
+
+  // Multas recurrentes
+  if(K.multas>5)sug.push({tipo:'seguridad',prioridad:'MEDIO',
+    texto:`${K.multas} multas del mes — costo: ${fM(K.multas_costo)}`,
+    accion:'Programa de sensibilización a operadores — revisar cámaras recurrentes'});
+
+  return sug;
+}
+
+function recalcK(){
+  if(!D.units)D.units=[];
+  if(!D.K)D.K={};
+  const K=D.K;
+  const us=D.units;
+
+  // ── Conteos por code (exacto según Estatus_Diario) ─────────────────
+  K.total  = us.length;
+  K.trn    = us.filter(u=>u.code==='TRN').length;   // TRN - En Transito
+  K.vta    = us.filter(u=>u.code==='VTA').length;   // VTA - Facturando (con monto)
+  K.lib    = us.filter(u=>u.code==='LIB').length;   // LIB - Por Liberar
+  K.dco    = us.filter(u=>['DCO','DSO'].includes(u.code)).length; // disponibles
+  K.so     = us.filter(u=>u.code==='SO').length;    // SO - Sin Operador
+  K.cp     = us.filter(u=>u.code==='CP').length;    // CP - Correctivo
+  K.sg     = us.filter(u=>u.code==='SG').length;    // SG - Siniestro
+  K.rm     = us.filter(u=>u.code==='RM').length;    // RM - Rep. Mayor
+  K.per    = us.filter(u=>['PER','SGR'].includes(u.code)).length;
+  K.consig = us.filter(u=>u.code==='SO'&&(u.obs||'').toLowerCase().includes('consign')).length;
+
+  // ── Facturando = VTA + TRN + LIB (las 45) ────────────────────────
+  K.fact_activas = K.trn+K.vta+K.lib; // Facturando = TRN+VTA+LIB
+
+  // ── Productividad ─────────────────────────────────────────────────
+  K.prod       = K.fact_activas;  // productivas = las que están generando
+  K.improd     = K.so + K.cp + K.sg + K.rm + K.per + K.dco;
+  K.prod_pct   = K.total ? r2(K.prod/K.total*100) : 0;
+  K.improd_pct = K.total ? r2(K.improd/K.total*100) : 0;
+  K.util_pct   = K.prod_pct;
+
+  // ── Venta del día = solo VTA con monto > 0 ────────────────────────
+  // (las 9 unidades que ya tienen monto capturado hoy)
+  K.venta = r2(us.filter(u=>u.code==='VTA'&&(u.monto||0)>0)
+               .reduce((s,u)=>s+(u.monto||0),0));
+  K.vta_con_monto = us.filter(u=>u.code==='VTA'&&(u.monto||0)>0).length;
+
+  // ── Mantenimiento ─────────────────────────────────────────────────
+  K.sol_mtto = us.reduce((s,u)=>s+((u.mtto&&u.mtto.length)||0),0);
+
+  // ── Rendimiento (excluir valores anómalos) ────────────────────────
+  const rvs=us.filter(u=>u.rv&&u.rv>0.5&&u.rv<9).map(u=>u.rv);
+  K.rend_avg = rvs.length ? r2(rvs.reduce((a,b)=>a+b,0)/rvs.length) : 0;
+  K.bajo_rend= us.filter(u=>u.rv&&u.rv>0&&u.rv<2.0&&u.rv<9).length;
+
+  // ── Incidencias / Accidentes / Multas ────────────────────────────
+  K.inc_may   = us.reduce((s,u)=>s+(u.inc||0),0);
+  K.acc       = (D.acc||[]).length;
+  K.multas    = (D.multas||[]).filter(m=>m.costo>0).length;
+  K.multas_costo = r2((D.multas||[]).filter(m=>m.costo>0).reduce((s,m)=>s+(m.costo||0),0));
+
+  // ── Fact/Util del mes (de circs o de unidades) ────────────────────
+  const circs=D.circs||[];
+  if(circs.length){
+    K.fact_mes = r2(circs.filter(c=>c.fact>0).reduce((s,c)=>s+(c.fact||0),0));
+    K.util_mes = r2(circs.reduce((s,c)=>s+(c.util||0),0));
+  } else {
+    K.fact_mes = r2(us.filter(u=>u.fact>0).reduce((s,u)=>s+(u.fact||0),0));
+    K.util_mes = r2(us.reduce((s,u)=>s+(u.util||0),0));
+  }
+
+  // ── Coordinadores: acumular desde unidades ────────────────────────
+  const coordMap={};
+  us.forEach(u=>{
+    const c=(u.coord||'').trim()||'Sin asignar';
+    if(!coordMap[c])coordMap[c]={coord:c,total:0,prod:0,so:0,mtto:0,
+      util_pct:0,fact:0,util:0,margen:0,rend:0,inc:0};
+    coordMap[c].total++;
+    if(['TRN','VTA','LIB'].includes(u.code))coordMap[c].prod++;
+    if(u.code==='TRN')coordMap[c].trn=(coordMap[c].trn||0)+1;
+    if(u.code==='VTA')coordMap[c].vta=(coordMap[c].vta||0)+1;
+    if(u.code==='LIB')coordMap[c].lib=(coordMap[c].lib||0)+1;
+    if(u.code==='SO')coordMap[c].so++;
+    if(['CP','RM','SG'].includes(u.code))coordMap[c].mtto++;
+    if((u.fact||0)!==0)coordMap[c].fact=r2((coordMap[c].fact||0)+(u.fact||0));
+    if((u.util||0)!==0)coordMap[c].util=r2((coordMap[c].util||0)+(u.util||0));
+    if(u.inc)coordMap[c].inc+=(u.inc||0);
+  });
+  Object.values(coordMap).forEach(c=>{
+    c.util_pct = c.total ? r2(c.prod/c.total*100) : 0;
+    c.margen   = c.fact  ? r2(c.util/c.fact*100)  : 0;
+    const rvs2 = us.filter(u=>(u.coord||'').trim()===c.coord&&u.rv&&u.rv>0.5&&u.rv<9).map(u=>u.rv);
+    c.rend     = rvs2.length ? r2(rvs2.reduce((a,b)=>a+b,0)/rvs2.length) : 0;
+  });
+
+  // Orden fijo: Yamileth → Tello → Eder → Julio
+  const ORDER=['YAMILETH','TELLO','EDER','JULIO'];
+  const coordsBase = Object.values(coordMap)
+    .filter(c=>c.coord&&c.coord!=='Sin asignar'&&c.total>0);
+
+  // Enriquecer con datos financieros reales de D.byCoord (viene del Data)
+  const byCoordMap={};
+  (D.byCoord||[]).forEach(c=>{byCoordMap[c.coord]=c;});
+
+  D.coords = coordsBase.map(c=>{
+    const fin=byCoordMap[c.coord]||{};
+    return {
+      ...c,
+      fact:  fin.fact||0,
+      util:  fin.util||0,
+      margen:fin.margen||0,
+      kmsC:  fin.kmsC||0,
+      kmsV:  fin.kmsV||0,
+      viajes:fin.viajes||0,
+      cajasUds: fin.cajas||0,
+    };
+  }).sort((a,b)=>{
+    const ai=ORDER.findIndex(o=>a.coord.toUpperCase().includes(o));
+    const bi=ORDER.findIndex(o=>b.coord.toUpperCase().includes(o));
+    if(ai>=0&&bi>=0)return ai-bi;
+    if(ai>=0)return -1; if(bi>=0)return 1;
+    return a.coord.localeCompare(b.coord);
+  });
+
+  // KPIs del mes desde Data
+  if(D.kpis_mes){Object.assign(K,{fact_mes:D.kpis_mes.fact_mes||0,util_mes:D.kpis_mes.util_mes||0,viajes_mes:D.kpis_mes.viajes_mes||0});}
+
+  // ── Sugerencias automáticas ──────────────────────────────────────
+  D.sugerencias = generarSugerencias(us, D.circs||[], K);
+}
+
+function recalcCoords(){
+  D.coords=D.coords.map(c=>{
+    const cu=D.units.filter(u=>u.coord===c.coord);
+    const t=cu.length,p=cu.filter(u=>['TRN','VTA'].includes(u.code)).length;
+    const fact=cu.reduce((s,u)=>s+(u.fact||0),0),util=cu.reduce((s,u)=>s+(u.util||0),0);
+    const rvs=cu.filter(u=>u.rv&&0.5<u.rv&&u.rv<9).map(u=>u.rv);
+    return {...c,total:t,prod:p,fact:r2(fact),util:r2(util),margen:fact?r2(util/fact*100):0,
+      rend:rvs.length?r2(rvs.reduce((a,b)=>a+b,0)/rvs.length):0};
+  });
+}
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+function bDash(){
+  if(!D.units)D.units=[];
+  if(!D.K)D.K={total:0,trn:0,vta:0,dco:0,lib:0,so:0,cp:0,sg:0,rm:0,per:0,prod:0,improd:0,prod_pct:0,improd_pct:0,inc_may:0,acc:0,multas:0,multas_costo:0,rend_avg:0,bajo_rend:0,venta:0,fact_mes:0,util_mes:0,sol_mtto:0};
+  const K=D.K;
+  // KPIs
+  const today=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'2-digit',month:'long'});
+  document.getElementById('kd').innerHTML=`
+    <div class="kt kb" onclick="go('flota',document.querySelectorAll('.tb')[1])" style="cursor:pointer">
+      <div class="v">${K.total}</div><div class="l">Unidades Totales</div>
+      <div class="s" style="color:#2980b9">${today}</div></div>
+    <div class="kt kg" onclick="setF('ALL',document.getElementById('fb-ALL'));go('flota',document.querySelectorAll('.tb')[1])" style="cursor:pointer">
+      <div class="v">${K.fact_activas||K.prod}</div><div class="l">Facturando</div>
+      <div class="s" style="color:#27ae60">VTA(${K.vta})+TRN(${K.trn})+LIB(${K.lib}) · ${K.prod_pct}%</div></div>
+    <div class="kt kb" onclick="setF('VTA',document.getElementById('fb-VTA'));go('flota',document.querySelectorAll('.tb')[1])" style="cursor:pointer">
+      <div class="v">${fM(K.venta)}</div><div class="l">Venta del Día</div>
+      <div class="s" style="color:#2980b9">${K.vta_con_monto||K.vta} uds VTA con monto</div></div>
+    <div class="kt ${K.util_pct>=50?'kg':K.util_pct>=35?'ky':'kr2'}">
+      <div class="v">${K.util_pct}%</div><div class="l">Utilización Flota</div>
+      <div class="s">${K.prod} productivas de ${K.total}</div></div>
+    <div class="kt kr2" onclick="setF('SO',document.getElementById('fb-SO'));go('flota',document.querySelectorAll('.tb')[1])" style="cursor:pointer">
+      <div class="v">${K.so}</div><div class="l">Sin Operador</div>
+      <div class="s" style="color:#c0392b">${K.consig?K.consig+' consignada':'Sin consignadas'}</div></div>
+    <div class="kt ko" onclick="bMttoModal()" style="cursor:pointer">
+      <div class="v">${K.cp+K.rm+K.sg}</div><div class="l">En Mantenimiento</div>
+      <div class="s" style="color:#d35400">CP(${K.cp}) RM(${K.rm}) SG(${K.sg}) ▸</div></div>
+  `;
+  // Fleet grid
+  const fd=[{c:'TRN',n:K.trn,l:'En Tránsito'},{c:'VTA',n:K.vta,l:'Facturando'},{c:'DCO',n:K.dco,l:'Dispo/Sin Op'},
+    {c:'LIB',n:K.lib,l:'Por Liberar'},{c:'SO',n:K.so,l:'Sin Operador'},{c:'CP',n:K.cp,l:'Correctivo'},
+    {c:'SG',n:K.sg,l:'Siniestro'},{c:'RM',n:K.rm,l:'Rep. Mayor'},{c:'PER',n:K.per,l:'PER/SGR'}];
+  document.getElementById('fg').innerHTML=fd.map(f=>`
+    <div class="fb f${f.c}" onclick="setF('${f.c}',null);go('flota',document.querySelectorAll('.tb')[1])">
+      <div class="fn">${f.n}</div><div class="fc">${f.c}</div><div class="fl">${f.l}</div>
+    </div>`).join('');
+  document.getElementById('pp').textContent=`${K.prod} (${K.prod_pct}%)`;
+  document.getElementById('dp').textContent=`${K.dco+K.lib} (${r2((K.dco+K.lib)/K.total*100)}%)`;
+  document.getElementById('ip').textContent=`${K.improd} (${K.improd_pct}%)`;
+
+  // Críticos
+  const so_u=D.units.filter(u=>u.code==='SO').map(u=>u.u).slice(0,6).join(', ');
+  const rm_u=D.units.filter(u=>u.code==='RM').map(u=>u.u).join(', ');
+  const sg_u=D.units.filter(u=>u.code==='SG').map(u=>u.u).join(', ');
+  const crit_r=D.units.filter(u=>u.rf==='critico').slice(0,3).map(u=>`${u.u}(${u.rv?.toFixed(2)})`).join(', ');
+  document.getElementById('crit').innerHTML=[
+    {d:'dr',t:`<b>${K.so} unidades SIN OPERADOR</b> — ${so_u}. Riesgo de cobertura inmediato.`},
+    {d:'dr',t:`<b>${K.rm} Reparaciones Mayores sin fecha:</b> ${rm_u} — exigir fecha compromiso al taller.`},
+    {d:'dr',t:`<b>${K.sg} Siniestros activos:</b> ${sg_u} — 315-ABC sin resolver 78 días. Gestión aseguradora urgente.`},
+    {d:'dr',t:`<b>BRP Tamaulipas 472-ABC:</b> utilidad <span class="tr bold">–$109,048</span> acumulada. Decisión ejecutiva requerida.`},
+    {d:'dr',t:`<b>${K.acc} accidente en mayo:</b> 314-ABC — costo $26,676. Pendiente cobro aseguradora.`},
+    {d:'dr',t:`<b>${K.bajo_rend} unidades rendimiento crítico &lt;2.0 km/L:</b> ${crit_r}`},
+  ].map(a=>`<li><span class="dot ${a.d}"></span><span>${a.t}</span></li>`).join('');
+
+  // Seguimiento
+  const cp_u=D.units.filter(u=>u.code==='CP').map(u=>u.u).join(', ');
+  document.getElementById('seg2').innerHTML=[
+    {d:'dy',t:`<b>${K.sol_mtto} solicitudes mtto NAL abiertas</b> — priorizar mecánica mayor y frenos.`},
+    {d:'dy',t:`<b>${K.cp} unidades en correctivo:</b> ${cp_u} — validar fecha de liberación.`},
+    {d:'dy',t:`<b>${K.multas} multas activas · ${fM(K.multas_costo)}</b> — 9 cámara obstruida. Proceso disciplinario urgente.`},
+    {d:'dy',t:`<b>115-ABC: posible transferencia a Impo/Expo</b> — confirmar decisión. Coord: Yamileth.`},
+    {d:'dy',t:`<b>7 indisciplinas mayo</b> (3 op. dormido) → escalar a RH para proceso formal.`},
+    {d:'dy',t:`<b>5 VTA sin monto capturado</b> → validar facturación antes de junta 17:30.`},
+  ].map(a=>`<li><span class="dot ${a.d}"></span><span>${a.t}</span></li>`).join('');
+
+  // Coordinadores
+  // Solo mostrar los 3 coordinadores reales
+  // Mostrar coordinadores activos: Yamileth, Tello, Eder, Julio
+  const COORDS_VALIDOS=['YAMILETH','TELLO','EDER','JULIO'];
+  const coordsFiltrados=D.coords.filter(c=>COORDS_VALIDOS.some(v=>c.coord.toUpperCase().includes(v)));
+  const sinData=coordsFiltrados.every(c=>c.fact===0&&c.util===0);
+  if(sinData){
+    const nd=document.getElementById('coordNote');
+    if(nd)nd.style.display='block';
+  }
+  document.getElementById('coords').innerHTML=coordsFiltrados.map((c,i)=>{
+    const colors=['#27ae60','#3498db','#9b59b6','#e67e22'];
+    const shortName=c.coord.split(' ').slice(0,2).join(' ');
+    const tieneData=c.fact>0||c.util!==0;
+    return `<div class="cc" style="border-left-color:${colors[i]||'#95a5a6'}">
+      <div class="cname">${shortName}</div>
+      <div style="font-size:10px;color:#64748b;margin-top:1px">${c.coord}</div>
+      <div class="cstats">
+        <div class="cstat"><div class="cv" style="color:#2980b9">${c.total}</div><div class="cl">Unidades</div></div>
+        <div class="cstat"><div class="cv" style="color:#27ae60">${c.prod}</div><div class="cl">Activas</div></div>
+        <div class="cstat"><div class="cv" style="color:#27ae60;font-size:11px">${fM(c.util)}</div><div class="cl">Utilidad</div></div>
+        <div class="cstat"><div class="cv" style="color:${c.margen>=10?'#27ae60':c.margen>=5?'#d68910':'#c0392b'};font-size:14px">${c.margen}%</div><div class="cl">Margen</div></div>
+      </div>
+      <div style="margin-top:8px;font-size:10px;display:flex;gap:10px;flex-wrap:wrap">
+        <span>🔴 SO: ${c.so}</span><span>🔧 Mtto: ${c.mtto}</span><span>⛽ ${c.rend} km/L</span><span>⚠ ${c.inc} inc.</span>
+      </div>
+      <div style="margin-top:6px">
+        <div style="font-size:9px;color:#64748b;margin-bottom:2px">UTILIZACIÓN ${c.util_pct}%</div>
+        <div class="prog"><div class="pf" style="width:${c.util_pct}%;background:${c.util_pct>=70?'#27ae60':c.util_pct>=40?'#f59e0b':'#e74c3c'}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Rend por tipo
+  const maxR=Math.max(...D.rend_tipo.map(t=>t.rend||0),1);
+  document.getElementById('rtipo').innerHTML=D.rend_tipo.map(t=>`
+    <div class="trow">
+      <span class="tname">${t.cat}</span>
+      <div style="flex:1;padding:0 10px">
+        <div style="font-size:10px;color:#64748b">${t.units} uds · ${fN(t.kms)} km</div>
+        <div class="tbar" style="margin-top:4px"><div class="tfill" style="width:${t.rend?t.rend/maxR*100:0}%;background:${t.rend>=3?'#27ae60':t.rend>=2?'#f59e0b':'#e74c3c'}"></div></div>
+      </div>
+      <span class="tval" style="color:${t.rend>=3?'#27ae60':t.rend>=2?'#d68910':'#c0392b'}">${t.rend} km/L</span>
+    </div>`).join('');
+
+  // Rend alertas
+  const crit=D.units.filter(u=>u.rf==='critico').sort((a,b)=>(a.rv||9)-(b.rv||9));
+  document.getElementById('rdash').innerHTML=(crit.length?crit.map(u=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0f2f5;font-size:11px;cursor:pointer" onclick="openU2('${u.u}')">
+      <span class="bold tr" style="min-width:78px">${u.u}</span>
+      <div style="flex:1"><div class="muted">${u.op.split(' ').slice(0,2).join(' ')}</div>
+        <div class="rb" style="margin-top:2px"><span class="rv tr">${u.rv?.toFixed(2)||'—'}</span>
+          <div class="track"><div class="fill" style="width:${Math.min(100,(u.rv||0)/5*100)}%;background:#e74c3c"></div></div></div></div>
+    </div>`).join(''):'<p class="muted" style="font-size:11px">Sin unidades críticas activas</p>')+
+    `<div style="font-size:10px;color:#64748b;margin-top:6px">+ ${D.units.filter(u=>u.rf==='bajo').length} unidades en rango bajo (2.0–2.5 km/L)</div>`;
+
+  // KPI mes
+  document.getElementById('kmes').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+      <div style="padding:8px;background:#f8f9fa;border-radius:6px"><div class="bold" style="font-size:18px;color:#3498db">${K.inc_may}</div><div class="muted">Incidencias mayo NAL</div></div>
+      <div style="padding:8px;background:#f8f9fa;border-radius:6px"><div class="bold" style="font-size:18px;color:#e74c3c">${K.acc}</div><div class="muted">Accidente NAL</div></div>
+      <div style="padding:8px;background:#f8f9fa;border-radius:6px"><div class="bold" style="font-size:18px;color:#d68910">${K.multas}</div><div class="muted">Multas · ${fM(K.multas_costo)}</div></div>
+      <div style="padding:8px;background:#f8f9fa;border-radius:6px"><div class="bold" style="font-size:18px;color:#27ae60">${K.rend_avg}</div><div class="muted">Rend. prom km/L</div></div>
+    </div>`;
+
+  // Seguridad dash
+  document.getElementById('segdash').innerHTML=D.acc.map(a=>`
+    <div style="border:1px solid #fde8e8;border-radius:7px;padding:10px;background:#fff9f9;font-size:11px;cursor:pointer;margin-bottom:6px" onclick="openU2('${a.unidad}')">
+      <div class="bold tr" style="font-size:13px">${a.unidad} · ${a.fecha}</div>
+      <div>${a.op}</div><div class="muted" style="margin-top:2px">${a.desc.substring(0,80)}</div>
+      ${a.costo>0?`<div class="tye bold" style="margin-top:2px">Costo: ${fM(a.costo)} · ${a.estatus}</div>`:''}
+    </div>`).join('')+
+    `<div style="margin-top:8px;font-size:11px"><b class="tye">Multas con costo pendiente cobro:</b><br>
+    ${D.multas.filter(m=>m.costo>0).map(m=>`<div style="padding:2px 0;border-bottom:1px solid #f0f2f5;font-size:10px;cursor:pointer" onclick="openU2('${m.unidad}')">${m.unidad} · ${m.op.split(' ').slice(0,2).join(' ')} · ${m.subtipo} · ${fM(m.costo)}</div>`).join('')}</div>`;
+
+  // Plan de acción — 100% dinámico desde sugerencias automáticas
+  const sug=D.sugerencias||[];
+  const PCOLOR={CRITICO:'#e74c3c',ALTO:'#e67e22',MEDIO:'#f59e0b',BAJO:'#27ae60'};
+  const PBG={CRITICO:'bgr',ALTO:'bgo',MEDIO:'bgy',BAJO:'bgg'};
+  const PICON={CRITICO:'🔴',ALTO:'🟠',MEDIO:'🟡',BAJO:'🟢'};
+  const PORDEN={CRITICO:0,ALTO:1,MEDIO:2,BAJO:3};
+  const sugOrdenadas=[...sug].sort((a,b)=>(PORDEN[a.prioridad]||9)-(PORDEN[b.prioridad]||9));
+  document.getElementById('plan').innerHTML=sugOrdenadas.length
+    ?sugOrdenadas.map((s,i)=>`
+      <div class="prow">
+        <span class="bg ${PBG[s.prioridad]||'bgb'}">${PICON[s.prioridad]} ${s.prioridad}</span>
+        <span>${s.texto}</span>
+        <span class="tb3 bold" style="font-size:10px;color:#64748b">${s.tipo.toUpperCase()}</span>
+        <span class="bg bgb" style="font-size:10px">▸ ${s.accion.substring(0,40)}${s.accion.length>40?'...':''}</span>
+      </div>`).join('')
+    :`<div style="color:#64748b;font-size:11px;padding:12px;text-align:center">
+        Sincroniza con el Sheet (🔄 Sync) para generar el plan de acción automático
+      </div>`;
+}
+
+// ═══ FLOTA ═══
+function bFlota(){
+  // Actualizar títulos dinámicos
+  const tFlota=document.getElementById('flotaTitle');
+  if(tFlota)tFlota.textContent='🚛 FLOTA NAL — '+( (D.units||[]).length||0 )+' UNIDADES';
+  // Actualizar conteos en botones de filtro
+  const K=D.K;
+  const counts={'ALL':K.total||0,'TRN':K.trn,'VTA':K.vta,'DCO':K.dco,'LIB':K.lib,'SO':K.so,'CP':K.cp,'SG':K.sg,'RM':K.rm,'PER':K.per};
+  // Mostrar subgrupo facturando en botón ALL
+  const fb_all=document.getElementById('fb-ALL');
+  if(fb_all)fb_all.innerHTML='Todas ('+K.total+')<br><span style="font-size:9px;opacity:.8">'+K.fact_activas+' facturando</span>';
+  const lbls={'ALL':'Todas','TRN':'🟢 Tránsito','VTA':'🔵 Facturando','DCO':'⚪ Disponible','LIB':'🟡 Por Liberar','SO':'🔴 Sin Operador','CP':'🟠 Correctivo','SG':'🟣 Siniestro','RM':'⛔ Rep. Mayor','PER':'🔘 Permiso'};
+  Object.keys(counts).forEach(k=>{
+    const b=document.getElementById('fb-'+k);
+    if(b)b.textContent=lbls[k]+(counts[k]?' ('+counts[k]+')':'');
+  });
+  renderGrid(D.units);
+  // Panel sugerencias flota
+  const fs=(D.sugerencias||[]).filter(s=>s.tipo==='flota'||s.tipo==='mantenimiento');
+  const fsel=document.getElementById('flotaSug');
+  if(fsel&&fs.length){
+    const PCOLOR={CRITICO:'#e74c3c',ALTO:'#e67e22',MEDIO:'#f59e0b'};
+    fsel.innerHTML=fs.map(s=>`
+      <div style="border-left:3px solid ${PCOLOR[s.prioridad]||'#94a3b8'};padding:6px 10px;background:#fffdf0;border-radius:0 6px 6px 0;margin-bottom:5px;font-size:10px">
+        <span style="font-weight:700;color:${PCOLOR[s.prioridad]}">${s.prioridad}</span>
+        <span style="color:#1e293b;margin-left:6px">${s.texto}</span>
+        <div style="color:#64748b;margin-top:2px">▸ ${s.accion}</div>
+      </div>`).join('');
+    fsel.parentElement.style.display='block';
+  } else if(fsel){
+    fsel.parentElement.style.display='none';
+  }
+}
+function renderGrid(units){
+  const q=(document.getElementById('srch')?.value||'').toLowerCase();
+  const f=units.filter(u=>{
+    if(FILTER!=='ALL'){if(FILTER==='DCO'&&(u.code==='DCO'||u.code==='DSO')){}else if(u.code!==FILTER)return false;}
+    if(q&&![u.u,u.op,u.ruta,u.coord,u.obs].some(s=>s.toLowerCase().includes(q)))return false;
+    return true;
+  });
+  const el=document.getElementById('ugrid');if(!el)return;
+  if(!f.length){el.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#64748b"><div style="font-size:32px">📂</div><div style="font-size:14px;font-weight:700;margin-top:8px">Sin datos cargados</div><div style="font-size:11px;margin-top:4px">Usa 📂 Actualizar Datos para cargar el Estatus Diario</div></div>';return;}
+  el.innerHTML=f.map(u=>`
+    <div class="uc uc${u.code}" onclick="openU2('${u.u}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div class="un">${u.u}</div>${bg(u.code)}
+      </div>
+      <div class="uop">${u.op}</div>
+      ${u.ruta?`<div class="urt">→ ${u.ruta}</div>`:''}
+      ${u.obs?`<div style="font-size:10px;color:#94a3b8;margin-top:2px">${u.obs.substring(0,55)}</div>`:''}
+      <div class="tags">
+        ${u.rv?`<span class="bg ${u.rf==='critico'?'bgr':u.rf==='bajo'?'bgy':'bgx'}">${u.rv.toFixed(2)} km/L</span>`:''}
+        ${u.inc>0?`<span class="bg ${u.inc>=10?'bgr':u.inc>=5?'bgy':'bgx'}">${u.inc} inc.</span>`:''}
+        ${u.monto>0?`<span class="bg bgg">${fM(u.monto)}</span>`:''}
+        ${u.mtto&&u.mtto.length?`<span class="bg bgo">${u.mtto.length} mtto</span>`:''}
+      </div>
+      <div class="ucirc">${u.tu} · ${u.circ}</div>
+    </div>`).join('');
+  const el2=document.getElementById('ucnt');if(el2)el2.textContent=`${f.length} de 83 unidades`;
+}
+function filterU(){renderGrid(D.units);}
+function setF(f,btn){FILTER=f;document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');bFlota();}
+
+// ═══ UNIT MODAL ═══
+function openU2(id){
+  const u=D.units.find(x=>x.u===id);if(!u)return;
+  const clr={critico:'#c0392b',bajo:'#d68910',ok:'#27ae60'}[u.rf]||'#64748b';
+  const incRows=u.ilist&&u.ilist.length?`<div class="ovf"><table class="tbl"><thead><tr><th>FECHA</th><th>TIPO</th><th>SUBTIPO</th><th>PRIORIDAD</th><th>DESCRIPCIÓN</th></tr></thead><tbody>
+    ${u.ilist.slice(0,15).map(i=>`<tr><td>${i.fecha}</td><td>${i.tipo}</td><td>${i.subtipo}</td>
+      <td><span class="bg ${i.prioridad==='Nivel 1'?'bgr':i.prioridad==='Nivel 2'?'bgy':'bgx'}">${i.prioridad}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${i.desc}">${i.desc.substring(0,80)}</td></tr>`).join('')}
+    </tbody></table></div>`:'<p class="muted" style="font-size:11px">Sin incidencias registradas en NAL</p>';
+  const mttoRows=u.mtto&&u.mtto.length?`<div class="ovf"><table class="tbl"><thead><tr><th>#</th><th>DESCRIPCIÓN</th><th>FECHA</th><th>ESTATUS</th></tr></thead><tbody>
+    ${u.mtto.map(m=>`<tr><td>${m.folio}</td><td>${m.desc}</td><td>${m.fecha}</td><td><span class="bg bgr">${m.estatus}</span></td></tr>`).join('')}
+    </tbody></table></div>`:'<p class="muted" style="font-size:11px">Sin solicitudes abiertas</p>';
+  document.getElementById('mc').innerHTML=`
+    <div style="border-bottom:2px solid #f0f2f5;padding-bottom:14px;margin-bottom:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div><div style="font-size:22px;font-weight:800">${u.u}</div>
+        <div style="font-size:13px;color:#64748b;margin-top:2px">${u.op}</div>
+        <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">${bg(u.code)} <span class="bg bgx">${u.tu}</span> <span class="bg bgb">${u.circ||'—'}</span></div></div>
+      <div style="text-align:right;font-size:11px;color:#64748b">
+        <div>Coord: <b>${u.coord||'—'}</b></div>
+        ${u.ruta?`<div>Ruta: <span style="color:#2980b9">${u.ruta}</span></div>`:''}
+        ${u.obs?`<div style="max-width:180px;text-align:right">${u.obs}</div>`:''}
+      </div>
+    </div>
+    <div class="g3" style="margin-bottom:14px">
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px">
+        <div style="font-size:10px;color:#64748b;text-transform:uppercase">Facturación Mes</div>
+        <div style="font-size:20px;font-weight:800;color:#2980b9;margin-top:4px">${fM(u.fact)}</div>
+        <div style="font-size:11px;margin-top:2px;color:${u.util>=0?'#27ae60':'#c0392b'}">Utilidad: ${fM(u.util)}</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px">
+        <div style="font-size:10px;color:#64748b;text-transform:uppercase">Rendimiento Diesel</div>
+        ${u.rv?`<div class="rb" style="margin-top:8px">
+          <span class="rv" style="color:${clr}">${u.rv.toFixed(2)}</span>
+          <div class="track"><div class="fill" style="width:${Math.min(100,u.rv/5*100)}%;background:${clr}"></div></div>
+        </div>
+        <div style="font-size:10px;color:#64748b;margin-top:4px">Prom NAL: ${D.rend_avg} · ${fN(u.kms)} km · ${fN(u.lit)} L${u.vmax?` · Vmax: ${u.vmax} km/h`:''}</div>`
+        :'<div class="muted" style="font-size:11px;margin-top:8px">Sin datos de rendimiento</div>'}
+      </div>
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px">
+        <div style="font-size:10px;color:#64748b;text-transform:uppercase">Incidencias Mayo</div>
+        <div style="font-size:28px;font-weight:800;color:${u.inc>=10?'#c0392b':u.inc>=5?'#d68910':'#27ae60'};margin-top:4px">${u.inc}</div>
+        <div style="font-size:11px;color:#64748b">Mtto: ${u.mtto?u.mtto.length:0} sol.${u.monto>0?` · Monto hoy: ${fM(u.monto)}`:''}</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:8px;border-bottom:2px solid #f0f2f5;padding-bottom:6px">⚠️ HISTORIAL INCIDENCIAS (${u.inc})</div>
+    ${incRows}
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin:12px 0 8px;border-bottom:2px solid #f0f2f5;padding-bottom:6px">🔧 SOLICITUDES MANTENIMIENTO (${u.mtto?u.mtto.length:0})</div>
+    ${mttoRows}`;
+  document.getElementById('modal').classList.add('open');
+}
+function closeM(){document.getElementById('modal').classList.remove('open');}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeM();});
+
+// ═══ INCIDENCIAS ═══
+function bInc(){
+  const K=D.K;
+  document.getElementById('inctot').textContent=K.inc_may+' incidencias NAL';
+  document.getElementById('kinc').innerHTML=`
+    <div class="kt kr2"><div class="v">${K.inc_may}</div><div class="l">Total Mayo NAL</div></div>
+    <div class="kt ko"><div class="v">${K.acc}</div><div class="l">Accidente NAL</div><div class="s" style="color:#d35400">Costo ${fM(D.acc.reduce((s,a)=>s+a.costo,0))}</div></div>
+    <div class="kt ky"><div class="v">${K.multas}</div><div class="l">Multas NAL</div><div class="s" style="color:#d68910">${fM(K.multas_costo)}</div></div>
+    <div class="kt kb"><div class="v">${D.indis.length}</div><div class="l">Indisciplinas</div></div>
+  `;
+  const tipos=[{t:'Atención Monitoreo',n:189},{t:'Multa',n:13},{t:'Indisciplinas',n:7},{t:'Tráfico',n:3},{t:'Demoras cliente',n:2},{t:'GPS/Carta Porte',n:2},{t:'Accidente',n:1},{t:'Otros',n:6}];
+  document.getElementById('inctype').innerHTML=tipos.map(x=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f0f2f5;font-size:11px">
+      <span style="min-width:145px;color:#475569">${x.t}</span>
+      <div class="prog" style="flex:1"><div class="pf" style="width:${x.n/189*100}%;background:#3498db"></div></div>
+      <span class="bold" style="min-width:28px;text-align:right">${x.n}</span>
+    </div>`).join('');
+  document.getElementById('incop').innerHTML=D.op_rec.map((o,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f0f2f5;font-size:11px">
+      <span class="muted">${i+1}.</span><span style="flex:1">${o.op.split(' ').slice(0,3).join(' ')}</span>
+      <span class="bg ${o.n>=15?'bgr':o.n>=10?'bgy':'bgx'}">${o.n}</span>
+    </div>`).join('');
+  document.getElementById('incunit').innerHTML=D.unit_rec.map((u,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f0f2f5;font-size:11px;cursor:pointer" onclick="openU2('${u.u}')">
+      <span class="muted">${i+1}.</span><span class="bold tb3" style="flex:1">${u.u}</span>
+      <span class="bg ${u.n>=15?'bgr':u.n>=10?'bgy':'bgx'}">${u.n} inc.</span>
+    </div>`).join('');
+  document.getElementById('incacc').innerHTML=D.acc.map(a=>`
+    <div style="border:1px solid #fde8e8;border-radius:8px;padding:11px;background:#fff9f9;font-size:11px;cursor:pointer;margin-bottom:6px" onclick="openU2('${a.unidad}')">
+      <div style="display:flex;justify-content:space-between"><span class="bold tr" style="font-size:14px">${a.unidad}</span><span class="bg ${a.estatus==='PendienteCobro'?'bgy':'bgx'}">${a.estatus}</span></div>
+      <div style="margin-top:4px;display:grid;grid-template-columns:1fr 1fr;gap:3px">
+        <div><span class="muted">Operador:</span> ${a.op}</div><div><span class="muted">Fecha:</span> ${a.fecha}</div>
+        <div style="grid-column:1/-1"><span class="muted">Lugar:</span> ${a.lugar}</div>
+        <div style="grid-column:1/-1">${a.desc.substring(0,100)}</div>
+        ${a.costo>0?`<div style="grid-column:1/-1"><span class="muted">Costo:</span> <span class="tye bold">${fM(a.costo)}</span></div>`:''}
+      </div></div>`).join('');
+  document.getElementById('multasbody').innerHTML=D.multas.map(m=>`
+    <tr><td>${m.fecha}</td><td class="bold tb3" style="cursor:pointer" onclick="openU2('${m.unidad}')">${m.unidad}</td>
+    <td>${m.op.split(' ').slice(0,2).join(' ')}</td>
+    <td><span class="bg ${m.subtipo.includes('ilicitas')?'bgr':m.subtipo.includes('Cámara')?'bgo':'bgy'}">${m.subtipo}</span></td>
+    <td class="${m.costo>0?'tye bold':''}">${m.costo>0?fM(m.costo):'—'}</td>
+    <td><span class="bg ${m.estatus==='PendienteCobro'?'bgy':'bgx'}">${m.estatus}</span></td></tr>`).join('');
+  document.getElementById('indisbody').innerHTML=D.indis.map(i=>`
+    <tr><td>${i.fecha}</td><td class="bold tb3" style="cursor:pointer" onclick="openU2('${i.unidad}')">${i.unidad}</td>
+    <td>${i.op.split(' ').slice(0,2).join(' ')}</td>
+    <td><span class="bg ${i.subtipo.includes('Dormido')?'bgr':'bgo'}">${i.subtipo}</span></td></tr>`).join('');
+}
+
+// ═══ RENDIMIENTO ═══
+function bRend(){
+  const K=D.K;
+  document.getElementById('rendavghdr').textContent='Promedio NAL: '+K.rend_avg+' km/L';
+  document.getElementById('krend').innerHTML=`
+    <div class="kt kb"><div class="v">${K.rend_avg}</div><div class="l">Promedio NAL km/L</div></div>
+    <div class="kt kr2"><div class="v">${K.bajo_rend}</div><div class="l">Crítico &lt;2.0</div></div>
+    <div class="kt ky"><div class="v">${D.units.filter(u=>u.rf==='bajo').length}</div><div class="l">Bajo 2.0–2.5</div></div>
+    <div class="kt kg"><div class="v">9.89</div><div class="l">Máximo (089-ABC)</div><div class="s" style="color:#27ae60">Rabón</div></div>
+  `;
+  const rrow=(u,c)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f2f5;font-size:11px;cursor:pointer" onclick="openU2('${u.u}')">
+    <span class="bold" style="color:${c};min-width:78px">${u.u}</span>
+    <div style="flex:1"><div class="muted">${u.op.split(' ').slice(0,3).join(' ')}</div>
+      <div class="rb" style="margin-top:2px"><span class="rv" style="color:${c}">${u.rv.toFixed(2)}</span>
+        <div class="track"><div class="fill" style="width:${Math.min(100,u.rv/5*100)}%;background:${c}"></div></div></div></div>
+    <span class="muted">${fN(u.kms)} km</span></div>`;
+  document.getElementById('rcrit').innerHTML=D.units.filter(u=>u.rv&&u.rv<2.0).sort((a,b)=>a.rv-b.rv).map(u=>rrow(u,'#c0392b')).join('')||'<p class="muted" style="font-size:11px">Sin unidades críticas</p>';
+  document.getElementById('rbajo').innerHTML=D.units.filter(u=>u.rv&&u.rv>=2.0&&u.rv<2.5).sort((a,b)=>a.rv-b.rv).map(u=>rrow(u,'#d68910')).join('')||'<p class="muted" style="font-size:11px">Sin unidades en rango bajo</p>';
+  document.getElementById('rendbody').innerHTML=D.units.filter(u=>u.rv&&u.rv>0).sort((a,b)=>a.rv-b.rv).map(u=>{
+    const cl=u.rf==='critico'?'bgr':u.rf==='bajo'?'bgy':'bgg';
+    return `<tr style="cursor:pointer" onclick="openU2('${u.u}')">
+      <td class="bold tb3">${u.u}</td><td>${u.op.split(' ').slice(0,2).join(' ')}</td>
+      <td><span class="bg bgx" style="font-size:9px">${u.tu}</span></td>
+      <td><span class="bg ${cl}">${u.rv.toFixed(2)}</span></td>
+      <td>${u.kms?fN(u.kms):'—'}</td><td>${u.lit?fN(u.lit):'—'}</td>
+      <td>${u.vmax||'—'}</td><td>${u.rel!=null?u.rel+'%':'—'}</td>
+      <td><span class="bg ${cl}">${u.rf.toUpperCase()}</span></td></tr>`;}).join('');
+}
+function filterRend(q){document.querySelectorAll('#rendbody tr').forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q.toLowerCase())?'':'none');}
+
+// ═══ MANTENIMIENTO ═══
+function bMttoModal(){
+  // Modal rápido desde dashboard
+  const cp=D.units.filter(u=>u.code==='CP');
+  const rm=D.units.filter(u=>u.code==='RM');
+  const sg=D.units.filter(u=>u.code==='SG');
+  const rows=[...cp,...rm,...sg].map(u=>`
+    <tr><td class="bold tb3">${u.u}</td>
+    <td><span class="bg ${u.code==='RM'?'bgr':u.code==='SG'?'bgp':'bgo'}">${u.code}</span></td>
+    <td style="font-size:10px">${u.op||'—'}</td>
+    <td style="font-size:10px">${u.obs||u.motivo||'Sin detalle'}</td>
+    <td style="font-size:10px">${u.coord||'—'}</td>
+    <td style="font-size:10px">${u.fechaCompU||'Sin fecha'}</td></tr>`).join('');
+  showModal('🔧 UNIDADES EN MANTENIMIENTO — DETALLE',
+    `<table class="tbl"><thead><tr><th>UNIDAD</th><th>TIPO</th><th>OPERADOR</th><th>DESCRIPCIÓN</th><th>COORD</th><th>F. COMPROMISO</th></tr></thead><tbody>${rows||'<tr><td colspan=6 style=text-align:center>Sin unidades en mantenimiento</td></tr>'}</tbody></table>`);
+}
+
+function showModal(title,content){
+  let m=document.getElementById('hubModal');
+  if(!m){
+    m=document.createElement('div');m.id='hubModal';
+    m.style='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    m.onclick=e=>{if(e.target===m)m.remove();};
+    document.body.appendChild(m);
+  }
+  m.innerHTML=`<div style="background:#fff;border-radius:12px;max-width:900px;width:100%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:14px;font-weight:800;color:#1e293b">${title}</span>
+      <button onclick="document.getElementById('hubModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#64748b">✕</button>
+    </div>
+    <div style="padding:16px;overflow-y:auto">${content}</div>
+  </div>`;
+  m.style.display='flex';
+}
+
+function bMtto(){
+  const allM=[];D.units.forEach(u=>{if(u.mtto&&u.mtto.length)u.mtto.forEach(m=>allM.push({...m,unidad:u.u,coord:u.coord,code:u.code}));});
+  const cpUnits=D.units.filter(u=>u.code==='CP');
+  const rmUnits=D.units.filter(u=>u.code==='RM');
+  const sgUnits=D.units.filter(u=>u.code==='SG');
+  const nCP=cpUnits.length,nRM=rmUnits.length,nSG=sgUnits.length;
+  document.getElementById('mttohdr').textContent=(nCP+nRM+nSG)+' unidades en mantenimiento · '+allM.length+' solicitudes';
+  document.getElementById('kmtto').innerHTML=`
+    <div class="kt ko" style="cursor:pointer" onclick="showMttoDetalle('CP')">
+      <div class="v">${nCP}</div><div class="l">Correctivo</div>
+      <div class="s" style="color:#d35400">Clic = detalle ▸</div></div>
+    <div class="kt kp" style="cursor:pointer" onclick="showMttoDetalle('RM')">
+      <div class="v">${nRM}</div><div class="l">Rep. Mayor</div>
+      <div class="s" style="color:#8e44ad">Clic = detalle ▸</div></div>
+    <div class="kt kp" style="cursor:pointer" onclick="showMttoDetalle('SG')">
+      <div class="v">${nSG}</div><div class="l">Siniestros</div>
+      <div class="s" style="color:#8e44ad">Clic = detalle ▸</div></div>
+    <div class="kt kr2" style="cursor:pointer" onclick="showMttoDetalle('ALL')">
+      <div class="v">${allM.length}</div><div class="l">Solicitudes</div>
+      <div class="s" style="color:#c0392b">Clic = todas ▸</div></div>
+  `;
+  document.getElementById('mttobody').innerHTML=allM.length?allM.map(m=>`
+    <tr style="cursor:pointer" onclick="openU2('${m.unidad}')">
+      <td>${m.folio||'—'}</td><td class="bold tb3">${m.unidad}</td><td>${m.desc||m.descripcion||'—'}</td>
+      <td>${m.fecha||'—'}</td><td><span class="bg bgr">${m.estatus||'Abierta'}</span></td>
+      <td style="font-size:10px;color:#64748b">${m.coord||'—'}</td></tr>`).join('')
+    :'<tr><td colspan=6 style="text-align:center;color:#64748b;padding:20px">Sin solicitudes cargadas — sube el archivo de Solicitudes Mtto</td></tr>';
+  document.getElementById('rmdet').innerHTML=rmUnits.length?rmUnits.map(u=>`
+    <div style="border:1px solid #fde8e8;border-radius:7px;padding:10px;background:#fff9f9;margin-bottom:8px;font-size:11px;cursor:pointer" onclick="openU2('${u.u}')">
+      <div class="bold tr" style="font-size:14px">${u.u}</div>
+      <div class="muted" style="margin-top:3px">${u.obs||u.motivo||'Sin comentarios'}</div>
+      <div class="tr bold" style="margin-top:4px">⚠ F. Compromiso: ${u.fechaCompU||'Sin fecha'} · Coord: ${u.coord||'Sin asignar'}</div>
+    </div>`):'<p class="muted" style="font-size:11px;text-align:center;padding:12px">Sin unidades en Rep. Mayor</p>';
+  document.getElementById('sgdet').innerHTML=sgUnits.length?sgUnits.map(u=>`
+    <div style="border:1px solid #f5eef8;border-radius:7px;padding:10px;background:#fdf6ff;margin-bottom:8px;font-size:11px;cursor:pointer" onclick="openU2('${u.u}')">
+      <div class="bold" style="color:#8e44ad;font-size:13px">${u.u}</div>
+      <div class="muted" style="margin-top:3px">${u.obs||u.motivo||'Sin comentarios'}</div>
+      <div class="tr bold" style="margin-top:4px">F. Compromiso: ${u.fechaCompU||'Sin fecha'} · Coord: ${u.coord||'—'}</div>
+    </div>`):'<p class="muted" style="font-size:11px;text-align:center;padding:12px">Sin siniestros activos</p>';
+}
+
+function showMttoDetalle(tipo){
+  const us=tipo==='ALL'
+    ?D.units.filter(u=>['CP','RM','SG'].includes(u.code))
+    :D.units.filter(u=>u.code===tipo);
+  const TNOMBRE={CP:'CORRECTIVOS',RM:'REP. MAYOR',SG:'SINIESTROS',ALL:'TODOS'};
+  const rows=us.map(u=>`
+    <tr><td class="bold tb3">${u.u}</td>
+    <td><span class="bg ${u.code==='RM'?'bgr':u.code==='SG'?'bgp':'bgo'}">${u.code}</span></td>
+    <td style="font-size:10px">${u.op||'—'}</td>
+    <td style="font-size:10px">${u.obs||u.motivo||'—'}</td>
+    <td style="font-size:10px">${u.coord||'—'}</td>
+    <td style="font-size:10px">${u.fechaCompU||'Sin fecha'}</td></tr>`).join('');
+  showModal('🔧 '+TNOMBRE[tipo]+' ('+us.length+' unidades)',
+    `<table class="tbl"><thead><tr><th>UNIDAD</th><th>TIPO</th><th>OPERADOR</th><th>DESCRIPCIÓN</th><th>COORD</th><th>F. COMPROMISO</th></tr></thead><tbody>${rows||'<tr><td colspan=6 style=text-align:center;padding:20px>Sin unidades</td></tr>'}</tbody></table>`);
+}
+function filterMtto(q){document.querySelectorAll('#mttobody tr').forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q.toLowerCase())?'':'none');}
+
+// ═══ SEGURIDAD ═══
+function bSeg(){
+  const cA=D.acc.reduce((s,a)=>s+a.costo,0),cM=D.multas.reduce((s,m)=>s+m.costo,0);
+  document.getElementById('seghdr').textContent=D.acc.length+' acc · '+D.multas.length+' multas NAL';
+  document.getElementById('kseg').innerHTML=`
+    <div class="kt kr2"><div class="v">${D.acc.length}</div><div class="l">Accidente NAL</div></div>
+    <div class="kt ky"><div class="v">${D.multas.length}</div><div class="l">Multas NAL</div></div>
+    <div class="kt ko"><div class="v">${fM(cA)}</div><div class="l">Costo Accidente</div><div class="s" style="color:#d35400">Pendiente cobro</div></div>
+    <div class="kt ky"><div class="v">${fM(cM)}</div><div class="l">Costo Multas</div><div class="s" style="color:#d68910">Pendiente cobro</div></div>
+  `;
+  document.getElementById('accfull').innerHTML=D.acc.map(a=>`
+    <div style="border:1px solid #fde8e8;border-radius:8px;padding:13px;background:#fff9f9">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span class="bold tr" style="font-size:16px">${a.unidad}</span>
+        <span class="bg ${a.estatus==='PendienteCobro'?'bgy':'bgx'}">${a.estatus}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px">
+        <div><span class="muted">Operador:</span> ${a.op}</div><div><span class="muted">Fecha:</span> ${a.fecha}</div>
+        <div style="grid-column:1/-1"><span class="muted">Lugar:</span> ${a.lugar}</div>
+        <div style="grid-column:1/-1"><b>${a.desc}</b></div>
+        ${a.costo>0?`<div style="grid-column:1/-1"><span class="muted">Costo:</span> <span class="tye bold">${fM(a.costo)}</span></div>`:''}
+      </div></div>`).join('');
+  document.getElementById('indisfull').innerHTML=D.indis.map(i=>`
+    <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #f0f2f5;font-size:11px;cursor:pointer" onclick="openU2('${i.unidad}')">
+      <span class="bold tb3" style="min-width:78px">${i.unidad}</span>
+      <div style="flex:1"><div>${i.op.split(' ').slice(0,3).join(' ')}</div><div class="muted">${i.fecha}</div></div>
+      <span class="bg ${i.subtipo.includes('Dormido')?'bgr':'bgo'}">${i.subtipo}</span>
+    </div>`).join('');
+  const cam={};D.multas.filter(m=>m.subtipo.includes('Cámara')).forEach(m=>cam[m.unidad]=(cam[m.unidad]||0)+1);
+  document.getElementById('camaradet').innerHTML=`<div class="muted" style="font-size:11px;margin-bottom:8px">Patrón detectado: mismas unidades obstruyen cámara repetidamente → posible conducta intencional. Proceso disciplinario urgente.</div>
+    ${Object.entries(cam).sort((a,b)=>b[1]-a[1]).map(([u,n])=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f0f2f5;font-size:11px;cursor:pointer" onclick="openU2('${u}')">
+        <span class="bold tb3" style="min-width:80px">${u}</span>
+        <div class="prog" style="flex:1"><div class="pf" style="width:${n/3*100}%;background:#f59e0b"></div></div>
+        <span class="bg bgy">${n}× multa</span><span class="tye bold">${fM(n*1000)}</span>
+      </div>`).join('')}`;
+}
+
+// ═══ CIRCUITOS ═══
+function bCirc(){
+  const circs=D.circs||[];
+  if(!circs.length){
+    ['circbody','circloss','circprofit'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.innerHTML='<tr><td colspan=8 style="text-align:center;color:#64748b;padding:20px">Sin datos de circuitos — carga el archivo Data</td></tr>';
+    });
+    return;
+  }
+  const sorted=[...circs].sort((a,b)=>b.util-a.util);
+  const margenMax=Math.max(...circs.map(c=>c.fact>0?c.util/c.fact*100:0));
+  document.getElementById('circbody').innerHTML=sorted.map((c,i)=>{
+    const margen=c.fact?r2(c.util/c.fact*100):0;
+    const sem=c.util<0?'<span class="bg bgr">🔴 PÉRDIDA</span>':margen<5?'<span class="bg bgy">🟡 BAJO</span>':'<span class="bg bgg">🟢 OK</span>';
+    return `<tr style="cursor:pointer" onclick="showCircDetalle('${c.circ.replace(/'/g,"\\'")}')">
+      <td class="bold">${i+1}. ${c.circ}</td><td>${c.uds||'—'}</td>
+      <td class="bold tb3">${fM(c.fact)}</td>
+      <td class="bold" style="color:${c.util<0?'#c0392b':'#27ae60'}">${fM(c.util)}</td>
+      <td style="color:${c.util_ud<0?'#c0392b':'#475569'}">${fM(c.util_ud)}</td>
+      <td>${fN(c.kms)}</td><td>${(c.rend||0).toFixed(2)}</td>
+      <td style="font-weight:700;color:${margen<0?'#c0392b':margen<5?'#d68910':'#27ae60'}">${margen}%</td>
+      <td>${sem}</td></tr>`;}).join('');
+  // TOP 10 MENOS rentables (mayores pérdidas o menor margen)
+  const menos=[...circs].sort((a,b)=>{
+    const ma=a.fact?a.util/a.fact*100:a.util;
+    const mb=b.fact?b.util/b.fact*100:b.util;
+    return ma-mb;
+  }).slice(0,10);
+  bCircSugerencias();
+  const ctEl=document.getElementById('circTitle');
+  if(ctEl)ctEl.textContent='📦 RENTABILIDAD — '+new Date().toLocaleDateString('es-MX',{month:'long',year:'numeric'}).toUpperCase();
+  const csEl=document.getElementById('circSubhdr');
+  if(csEl)csEl.textContent=(D.circs||[]).length+' circuitos NAL';
+  document.getElementById('circloss').innerHTML=menos.map((c,i)=>{
+    const margen=c.fact?r2(c.util/c.fact*100):0;
+    return `<div style="border:1px solid ${c.util<0?'#fde8e8':'#fef3cd'};border-left:4px solid ${c.util<0?'#e74c3c':'#f59e0b'};border-radius:7px;padding:10px;background:${c.util<0?'#fff9f9':'#fffdf0'};margin-bottom:7px;cursor:pointer" onclick="showCircDetalle('${c.circ.replace(/'/g,"\\'")}')">
+      <div style="display:flex;justify-content:space-between">
+        <span class="bold" style="color:${c.util<0?'#c0392b':'#d68910'}">${i+1}. ${c.circ}</span>
+        <span style="font-size:10px;color:#64748b">${c.uds||'—'} uds</span>
+      </div>
+      <div style="font-size:18px;font-weight:800;color:${c.util<0?'#c0392b':'#d68910'};margin:4px 0">${fM(c.util)}</div>
+      <div style="font-size:10px;color:#64748b">${fM(c.fact)} factura · ${margen}% margen · ${fM(c.util_ud)}/ud</div>
+    </div>`;}).join('');
+  // TOP 10 MÁS rentables
+  const mas=[...circs].sort((a,b)=>{
+    const ma=a.fact?a.util/a.fact*100:0;
+    const mb=b.fact?b.util/b.fact*100:0;
+    return mb-ma;
+  }).slice(0,10);
+  document.getElementById('circprofit').innerHTML=mas.map((c,i)=>{
+    const margen=c.fact?r2(c.util/c.fact*100):0;
+    return `<div style="border:1px solid #a9dfbf;border-left:4px solid #27ae60;border-radius:7px;padding:10px;background:#f0fff4;margin-bottom:7px;cursor:pointer" onclick="showCircDetalle('${c.circ.replace(/'/g,"\\'")}')">
+      <div style="display:flex;justify-content:space-between">
+        <span class="bold tg">${i+1}. ${c.circ}</span>
+        <span style="font-size:10px;color:#64748b">${c.uds||'—'} uds</span>
+      </div>
+      <div style="font-size:18px;font-weight:800;color:#27ae60;margin:4px 0">+${fM(c.util)}</div>
+      <div style="font-size:10px;color:#64748b">${fM(c.fact)} factura · ${margen}% margen · ${fM(c.util_ud)}/ud</div>
+    </div>`;}).join('');
+}
+
+function bCircSugerencias(){
+  const sug=(D.sugerencias||[]).filter(s=>s.tipo==='circuito');
+  const el=document.getElementById('circSug');
+  if(!el)return;
+  const PCOLOR={CRITICO:'#e74c3c',ALTO:'#e67e22',MEDIO:'#f59e0b'};
+  el.innerHTML=sug.length?sug.map(s=>`
+    <div style="border-left:3px solid ${PCOLOR[s.prioridad]||'#94a3b8'};padding:8px 12px;background:#fff;border-radius:0 6px 6px 0;margin-bottom:6px">
+      <div style="font-size:10px;font-weight:700;color:${PCOLOR[s.prioridad]}">${s.prioridad}</div>
+      <div style="font-size:11px;color:#1e293b">${s.texto}</div>
+      <div style="font-size:10px;color:#64748b;margin-top:2px">▸ ${s.accion}</div>
+    </div>`).join('')
+    :'<div style="color:#64748b;font-size:11px;padding:8px">Sin sugerencias — operación normal en circuitos</div>';
+}
+
+function showCircDetalle(nombre){
+  const c=D.circs.find(x=>x.circ===nombre);if(!c)return;
+  const margen=c.fact?r2(c.util/c.fact*100):0;
+  const udsCirc=D.units.filter(u=>u.circ===nombre||u.ruta===nombre);
+  showModal('📦 CIRCUITO: '+nombre,`
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+      <div style="background:#f0fff4;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:#27ae60">${fM(c.fact)}</div><div style="font-size:10px;color:#64748b">Facturación</div></div>
+      <div style="background:${c.util<0?'#fff9f9':'#f0fff4'};border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:${c.util<0?'#c0392b':'#27ae60'}">${fM(c.util)}</div><div style="font-size:10px;color:#64748b">Utilidad</div></div>
+      <div style="background:#fffdf0;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:#d68910">${margen}%</div><div style="font-size:10px;color:#64748b">Margen</div></div>
+      <div style="background:#f0f9ff;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:#3498db">${fM(c.util_ud)}</div><div style="font-size:10px;color:#64748b">Util/Unidad</div></div>
+    </div>
+    ${udsCirc.length?`<div style="font-weight:700;font-size:12px;margin-bottom:8px">Unidades en este circuito:</div>
+    <table class="tbl"><thead><tr><th>UNIDAD</th><th>OPERADOR</th><th>COORD</th><th>ESTATUS</th></tr></thead>
+    <tbody>${udsCirc.map(u=>`<tr><td class="bold tb3">${u.u}</td><td style="font-size:10px">${u.op||'—'}</td><td style="font-size:10px">${u.coord||'—'}</td><td><span class="bg ${u.code==='TRN'?'bgg':u.code==='SO'?'bgr':'bgy'}">${u.code}</span></td></tr>`).join('')}</tbody></table>`:'<div style="color:#64748b;font-size:11px">No hay unidades asignadas a este circuito en el estatus diario</div>'}
+  `);
+}
+
+// ═══ MENSUAL ═══
+function bMens(){
+  const K=D.K;
+  const mes=new Date().toLocaleDateString('es-MX',{month:'long',year:'numeric'}).toUpperCase();
+  const circs=D.circs||[];
+  // Usar KPIs del Data (fuente real del mes)
+  const km=D.kpis_mes||{};
+  const fact_mes  = km.fact_mes  || circs.reduce((s,c)=>s+(c.fact||0),0) || K.fact_mes  || 0;
+  const util_mes  = km.util_mes  || circs.reduce((s,c)=>s+(c.util||0),0) || K.util_mes  || 0;
+  const viajes_mes= km.viajes_mes|| K.viajes_mes||0;
+  const kmsC_mes  = km.kmsC_mes  || 0;
+  const kmsV_mes  = km.kmsV_mes  || 0;
+  const margen_mes= fact_mes?r2(util_mes/fact_mes*100):0;
+  const totalUds=D.units.length||0;
+  const msHdr=document.getElementById('mensSubhdr');
+  if(msHdr)msHdr.textContent=(D.units.length||0)+' Unidades NAL · '+mes;
+  const msTtl=document.getElementById('mensTitle');
+  if(msTtl)msTtl.textContent='📈 RESUMEN MENSUAL — '+mes;
+  document.getElementById('kmens').innerHTML=`
+    <div class="kt kb"><div class="v">${fM(fact_mes)}</div><div class="l">Venta Total Mes</div><div class="s" style="color:#2980b9">${totalUds} uds · ${viajes_mes||'—'} viajes</div></div>
+    <div class="kt kg"><div class="v">${fM(util_mes)}</div><div class="l">Utilidad Total</div><div class="s" style="color:#27ae60">Margen ${margen_mes}%</div></div>
+    <div class="kt ${margen_mes>=10?'kg':margen_mes>=5?'ky':'kr2'}"><div class="v">${margen_mes}%</div><div class="l">Margen %</div><div class="s">${margen_mes>=10?'✅ Saludable':margen_mes>=5?'⚠ Bajo':'🔴 Crítico'}</div></div>
+    <div class="kt kb"><div class="v">${fN(kmsC_mes)}</div><div class="l">Km Cargados</div><div class="s" style="color:#2980b9">Eficiencia operativa</div></div>
+    <div class="kt ky"><div class="v">${fN(kmsV_mes)}</div><div class="l">Km Vacíos</div><div class="s" style="color:#d68910">${kmsC_mes?r2(kmsV_mes/(kmsC_mes+kmsV_mes)*100)+'% ratio':'—'}</div></div>
+    <div class="kt kr2"><div class="v">${K.inc_may||(D.urgencias||[]).filter(u=>u.estatus!=='Resuelto').length||0}</div><div class="l">Incidencias</div><div class="s" style="color:#c0392b">${D.acc&&D.acc.length||0} accidentes</div></div>
+  `;
+  // Tabla resumen por coordinador del mes
+  // Tabla coordinador: priorizar D.byCoord (del Data) sobre D.coords
+  const coordSumEl=document.getElementById('coordSum');
+  if(coordSumEl){
+    const cs=(D.byCoord&&D.byCoord.length)?D.byCoord:D.coords||[];
+    coordSumEl.innerHTML=cs.length?cs.map(c=>{
+      const m=c.margen||( c.fact?r2(c.util/c.fact*100):0 );
+      const coord=c.coord||'';
+      const shortName=coord.split(' ').slice(0,2).join(' ');
+      // Datos de flota desde D.coords
+      const flotaInfo=D.coords.find(x=>x.coord===coord)||{};
+      return`<tr>
+        <td class="bold" style="font-size:11px">${shortName}</td>
+        <td class="bold tb3">${fM(c.fact||0)}</td>
+        <td class="bold" style="color:${(c.util||0)<0?'#c0392b':'#27ae60'}">${fM(c.util||0)}</td>
+        <td style="color:${m<0?'#c0392b':m<5?'#d68910':'#27ae60'};font-weight:700">${m}%</td>
+        <td>${c.viajes||'—'}</td>
+        <td>${fN(c.kmsC||0)}</td>
+        <td>${fN(c.kmsV||0)}</td>
+        <td>${flotaInfo.total||c.uds||'—'}</td>
+        <td>${c.cajas||flotaInfo.cajasUds||'—'}</td>
+        <td class="tr">${flotaInfo.inc||0}</td></tr>`;}).join('')
+      :`<tr><td colspan=10 style="text-align:center;color:#64748b;padding:16px">
+          Sin datos financieros — sincroniza el Sheet (incluye hoja Data)
+        </td></tr>`;
+  }
+  const movRH=D.mov_rh||[];
+  const mesLabel=new Date().toLocaleDateString('es-MX',{month:'long',year:'numeric'}).toUpperCase();
+  document.getElementById('rhbody').innerHTML=movRH.length
+    ?movRH.map(m=>`
+      <tr><td>${m.tipo||'—'}</td><td>${m.cant||0}</td>
+      <td class="${(m.tipo||'').toLowerCase().includes('multa')?'tr bold':''}">${fM(m.monto||0)}</td></tr>`).join('')+
+      `<tr style="font-weight:700;border-top:2px solid #e2e8f0">
+        <td>TOTAL ${mesLabel}</td><td>${movRH.reduce((s,r)=>s+(r.cant||0),0)}</td>
+        <td class="tb3">${fM(movRH.reduce((s,r)=>s+(r.monto||0),0))}</td></tr>`
+    :'<tr><td colspan=3 style="text-align:center;color:#64748b;padding:16px">Sin datos de movimientos — carga Movimientos_RH</td></tr>';
+  const riesgos=[];
+  const soU=D.units.filter(u=>u.code==='SO');
+  if(soU.length)riesgos.push({d:'dr',t:`<b>Sin Operador:</b> ${soU.length} unidades — ${soU.slice(0,5).map(u=>u.u).join(', ')}${soU.length>5?'...':''}`});
+  const sgU=D.units.filter(u=>u.code==='SG');
+  if(sgU.length)riesgos.push({d:'dr',t:`<b>Siniestros activos:</b> ${sgU.length} unidades — ${sgU.map(u=>u.u).join(', ')}`});
+  const rmU=D.units.filter(u=>u.code==='RM');
+  if(rmU.length)riesgos.push({d:'do',t:`<b>Rep. Mayor:</b> ${rmU.length} unidades sin fecha compromiso — ${rmU.map(u=>u.u).join(', ')}`});
+  const cpU=D.units.filter(u=>u.code==='CP');
+  if(cpU.length)riesgos.push({d:'dy',t:`<b>Correctivos activos:</b> ${cpU.length} unidades en taller`});
+  const circsLoss=(D.circs||[]).filter(c=>c.util<0).sort((a,b)=>a.util-b.util);
+  if(circsLoss.length)riesgos.push({d:'dy',t:`<b>Circuitos en pérdida:</b> ${circsLoss.slice(0,3).map(c=>c.circ+' ('+fM(c.util)+')').join(' · ')}`});
+  if(K.bajo_rend>0)riesgos.push({d:'dy',t:`<b>Rendimiento crítico:</b> ${K.bajo_rend} unidades &lt;2.0 km/L`});
+  if(!riesgos.length)riesgos.push({d:'db2',t:'Sin riesgos críticos detectados — operación normal'});
+  document.getElementById('riskl').innerHTML=riesgos.map(a=>`<li><span class="dot ${a.d}"></span><span>${a.t}</span></li>`).join('');
+  document.getElementById('oprec').innerHTML=D.op_rec.map((o,i)=>`
+    <div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #f0f2f5;font-size:11px">
+      <span class="muted">${i+1}.</span><span style="flex:1">${o.op.split(' ').slice(0,3).join(' ')}</span>
+      <span class="bg ${o.n>=15?'bgr':o.n>=10?'bgy':'bgx'}">${o.n}</span>
+    </div>`).join('');
+  document.getElementById('unitrec').innerHTML=D.unit_rec.map((u,i)=>`
+    <div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #f0f2f5;font-size:11px;cursor:pointer" onclick="openU2('${u.u}')">
+      <span class="muted">${i+1}.</span><span class="bold tb3" style="flex:1">${u.u}</span>
+      <span class="bg ${u.n>=15?'bgr':u.n>=10?'bgy':'bgx'}">${u.n}</span>
+    </div>`).join('');
+  // TOP 10 circuitos más rentables del mes
+  const top10mas=[...(D.circs||[])].filter(c=>c.fact>0).sort((a,b)=>(b.util/b.fact)-(a.util/a.fact)).slice(0,10);
+  const top10menos=[...(D.circs||[])].filter(c=>c.fact>0).sort((a,b)=>(a.util/a.fact)-(b.util/b.fact)).slice(0,10);
+  const top10uds=[...(D.units||[])].filter(u=>u.monto>0).sort((a,b)=>b.monto-a.monto).slice(0,10);
+  const top10rendBajo=[...(D.units||[])].filter(u=>u.rv>0&&u.rv<9).sort((a,b)=>a.rv-b.rv).slice(0,10);
+
+  // Mostrar top10 en el mensual si existen esos contenedores
+  const t10c=document.getElementById('top10circs');
+  if(t10c)t10c.innerHTML=top10mas.length?top10mas.map((c,i)=>{const m=c.fact?r2(c.util/c.fact*100):0;return`<tr><td class="bold">${i+1}. ${c.circ}</td><td class="bold tg">${fM(c.util)}</td><td style="color:${m>=10?'#27ae60':'#d68910'}">${m}%</td><td>${c.uds||'—'}</td></tr>`;}).join(''):'<tr><td colspan=4 style="text-align:center;color:#64748b;padding:12px">Sin datos de circuitos</td></tr>';
+  const t10cm=document.getElementById('top10circsMenos');
+  if(t10cm)t10cm.innerHTML=top10menos.length?top10menos.map((c,i)=>{const m=c.fact?r2(c.util/c.fact*100):0;return`<tr><td class="bold">${i+1}. ${c.circ}</td><td class="${c.util<0?'tr':'tye'} bold">${fM(c.util)}</td><td style="color:${c.util<0?'#e74c3c':'#d68910'}">${m}%</td><td>${c.uds||'—'}</td></tr>`;}).join(''):'<tr><td colspan=4 style="text-align:center;color:#64748b;padding:12px">Sin datos</td></tr>';
+
+  const estado=K.improd_pct>40?'🔴 ATENCIÓN REQUERIDA':K.improd_pct>20?'🟡 MONITOREO':' 🟢 OPERACIÓN NORMAL';
+  document.getElementById('concl').innerHTML=`
+    <span class="${K.improd_pct>40?'tr':K.improd_pct>20?'tye':'tg'} bold">Estado Operativo ${mes}: ${estado}</span><br><br>
+    La flota NAL opera con <b>${K.improd_pct}% de unidades improductivas</b> (${K.improd}/${K.total}).
+    ${fact_mes>0?`Facturación <b>${fM(fact_mes)}</b> con utilidad bruta <b>${fM(util_mes)}</b> (margen <b>${margen_mes}%</b>).`:'Carga la hoja Data para ver facturación del mes.'}
+    ${circsLoss.length?`${circsLoss.length} circuito${circsLoss.length>1?'s':''} opera${circsLoss.length===1?'':'n'} en pérdida.`:''}
+    <br><br><b>Prioridades ejecutivas del mes:</b><br>
+    ${riesgos.slice(0,5).map((r,i)=>`${i+1}. ${r.t.replace(/<[^>]+>/g,'')}`).join('<br>')}`;
+}
+
+
+
+// ═══ WHATSAPP / URGENCIAS ═══
+if(!window.D)window.D={};
+if(!D.urgencias)D.urgencias=[];
+let WA_FILTER='ALL';
+
+const WA_KEYWORDS={
+  CRITICO:[
+    {re:/accidente|choque|volcadura|volcó|colisión|atropell/i,cat:'🚨 Accidente'},
+    {re:/robo|asalto|secuestro|extorsión|levantón/i,cat:'🦹 Robo/Asalto'},
+    {re:/incendio|fuego|se incendió/i,cat:'🔥 Incendio'},
+    {re:/falleci|muerto|muerte|herido grave/i,cat:'💀 Emergencia médica'},
+    {re:/falla de frenos|sin frenos|frenos fallaron/i,cat:'⛔ Falla crítica frenos'},
+  ],
+  ALTO:[
+    {re:/varado|varada|descompuesto|descompuesta|falla mecánica|falla de motor|motor|se apagó|no enciende/i,cat:'🔧 Falla mecánica'},
+    {re:/llanta|ponchada|ponchazo|llanta tronada/i,cat:'🛞 Llanta'},
+    {re:/detenido|retenido|aduana|retén|revisión|militar|policía/i,cat:'🚔 Detenido/Revisión'},
+    {re:/accidente menor|golpe|raspón|abollón|chocó levemente/i,cat:'⚠️ Incidente menor'},
+    {re:/perdió ventana|ventana perdida|llegó tarde|retraso|hora de llegada/i,cat:'⏰ Ventana perdida'},
+  ],
+  MEDIO:[
+    {re:/sin operador|operador no se presentó|no llegó el operador/i,cat:'👤 Sin operador'},
+    {re:/problema con cliente|queja|reclamación|inconformidad/i,cat:'😠 Problema cliente'},
+    {re:/sin diesel|sin combustible|diesel|gasolina/i,cat:'⛽ Combustible'},
+    {re:/tráfico|tránsito lento|accidente en carretera|carretera cerrada/i,cat:'🚦 Tráfico'},
+    {re:/hospedaje|hotel|no tiene dónde dormir/i,cat:'🏨 Hospedaje'},
+  ],
+  BAJO:[
+    {re:/disponible|libre|llegó|entregó|descargó|cargó/i,cat:'✅ Disponibilidad'},
+    {re:/pregunta|consulta|favor de|por favor/i,cat:'❓ Consulta'},
+    {re:/ok|bien|todo bien|sin novedad/i,cat:'👍 Sin novedad'},
+  ]
+};
+
+function detectarPrioridad(texto){
+  for(const [prioridad,rules] of Object.entries(WA_KEYWORDS)){
+    for(const r of rules){
+      if(r.re.test(texto))return{prioridad,categoria:r.cat};
+    }
+  }
+  return{prioridad:'BAJO',categoria:'💬 Mensaje general'};
+}
+
+function extraerUnidad(texto){
+  const m=texto.match(/\b(\d{3}-ABC|ABC-\d{3}|\d{3}ABC)\b/i);
+  return m?m[0].toUpperCase():'—';
+}
+
+function extraerOperador(texto){
+  // Busca nombres propios después de palabras clave
+  const m=texto.match(/operador[:\s]+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+ [A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/i);
+  return m?m[1]:'—';
+}
+
+function parsearMensajesWA(texto){
+  const msgs=[];
+  // Formato WA: "19/05/2026, 08:32 - Nombre: mensaje"
+  // o simplemente líneas de texto
+  const lineas=texto.split(/\n/);
+  const reWA=/^(\d{1,2}\/\d{1,2}\/\d{2,4})[,\s]+(\d{1,2}:\d{2})\s*[-–]\s*([^:]+):\s*(.+)$/;
+  const reWA2=/^\[(\d{1,2}\/\d{1,2}\/\d{2,4})[,\s]+(\d{1,2}:\d{2})\]\s*([^:]+):\s*(.+)$/;
+  
+  let buffer=''; let bufferMeta={hora:'',remite:'',grupo:''};
+  
+  lineas.forEach(linea=>{
+    linea=linea.trim();if(!linea)return;
+    const m=linea.match(reWA)||linea.match(reWA2);
+    if(m){
+      if(buffer)msgs.push({...bufferMeta,texto:buffer.trim()});
+      bufferMeta={hora:m[1]+' '+m[2],remite:m[3].trim(),grupo:document.getElementById('waGrupo').value||'General'};
+      buffer=m[4];
+    } else {
+      if(buffer)buffer+=' '+linea;
+      else{buffer=linea;bufferMeta={hora:new Date().toLocaleDateString('es-MX'),remite:'Desconocido',grupo:document.getElementById('waGrupo').value||'General'};}
+    }
+  });
+  if(buffer)msgs.push({...bufferMeta,texto:buffer.trim()});
+  return msgs.filter(m=>m.texto.length>4).map(m=>{
+    // Detectar coordinador desde el remite o texto
+    const coordFound=detectarCoordWA(m.remite+''+m.texto);
+    return {...m,coord:coordFound};
+  });
+}
+
+function detectarCoordWA(texto){
+  const t=(texto||'').toUpperCase();
+  if(t.includes('YAMILETH')||t.includes('YAMILET')||t.includes('FERNANDEZ'))return'YAMILETH FERNANDEZ MURILLO';
+  if(t.includes('TELLO')||t.includes('JUAN JOSE')||t.includes('JJ TELLO'))return'JUAN JOSE TELLO LAMAS';
+  if(t.includes('EDER')||t.includes('ZUÑIGA')||t.includes('ZUNI'))return'EDER ZUÑIGA RAMIREZ';
+  if(t.includes('JULIO')||t.includes('HERNANDEZ GALVAN'))return'JULIO ALEJANDRO HERNANDEZ GALVAN';
+  return'';
+}
+
+function extraerCajaWA(texto){
+  const m=(texto||'').match(/(?:caja|remolque)\s*[:#\-]?\s*([A-Z0-9]{3,10})/i);
+  return m?m[1].toUpperCase():'';
+}
+function clasificarTipoWA(texto){
+  const t=(texto||'').toLowerCase();
+  if(/accidente|choque|volcad|siniestro/.test(t))return'Siniestro';
+  if(/robo|asalto|secuest/.test(t))return'Seguridad';
+  if(/falla|motor|freno|llanta|mecán|varad|descompuest/.test(t))return'Mecánica';
+  if(/caja|remolque/.test(t))return'Caja';
+  if(/cliente|entrega|queja|reclam/.test(t))return'Cliente';
+  if(/rescate|grúa|arrastre/.test(t))return'Rescate';
+  if(/retraso|demora|ventana|tardó/.test(t))return'Retraso';
+  if(/document|licencia|permiso/.test(t))return'Documentación';
+  if(/preventivo|aceite|servicio|taller/.test(t))return'Mantenimiento';
+  return'Operativa';
+}
+function analizarWA(){
+  const txt=document.getElementById('watxt').value.trim();
+  if(!txt){toast('Pega mensajes de WhatsApp primero');return;}
+  
+  const msgs=parsearMensajesWA(txt);
+  if(!msgs.length){toast('No se detectaron mensajes válidos');return;}
+  
+  const nuevas=msgs.map((m,i)=>{
+    const{prioridad,categoria}=detectarPrioridad(m.texto);
+    const unidad=extraerUnidad(m.texto);
+    const operador=extraerOperador(m.texto);
+    const caja=extraerCajaWA(m.texto);
+    const tipo=clasificarTipoWA(m.texto);
+    const fechaHora=m.hora.includes('/')?m.hora.split(' '):['',m.hora];
+    return{
+      id:Date.now()+i,
+      fecha:fechaHora[0]||new Date().toLocaleDateString('es-MX'),
+      hora:fechaHora[1]||m.hora,
+      remite:m.remite,grupo:m.grupo,coord:m.coord||'',
+      texto:m.texto,unidad,operador,caja,
+      cliente:'',tipo,
+      prioridad,categoria,
+      estatus:'Abierto',resuelto:'No',pendiente:'Sí',
+      seguimiento:m.coord||'',
+      ts:Date.now()
+    };
+  });
+  
+  // Agregar al array global, evitando duplicados exactos
+  const textos=new Set((D.urgencias||[]).map(u=>u.texto));
+  const unicas=nuevas.filter(n=>!textos.has(n.texto));
+  D.urgencias=[...unicas,...(D.urgencias||[])];
+  saveStor();
+  document.getElementById('watxt').value='';
+  bWhats();
+  // Si hay tab de whats activo, actualizar tabla
+  if(document.getElementById('pane-whats').classList.contains('active'))bWhats();
+  toast('✅ '+unicas.length+' eventos · prioridad: '+nuevas.filter(n=>n.prioridad==='CRITICO').length+' críticos · '+nuevas.filter(n=>n.prioridad==='ALTO').length+' altos');
+}
+
+function limpiarWA(){
+  if(!confirm('¿Limpiar todos los mensajes de WhatsApp?'))return;
+  D.urgencias=[];saveStor();bWhats();
+}
+
+function setWF(f,btn){
+  WA_FILTER=f;
+  document.querySelectorAll('[id^="wf-"]').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  renderWAList();
+}
+
+function marcarWA(id,est){
+  const u=D.urgencias.find(x=>x.id===id);
+  if(u){u.estatus=est;saveStor();renderWAList();}
+}
+
+function bWhats(){
+  const urg=D.urgencias||[];
+  const counts={CRITICO:0,ALTO:0,MEDIO:0,BAJO:0,RESUELTO:0};
+  urg.forEach(u=>{ if(u.estatus==='Resuelto')counts.RESUELTO++; else counts[u.prioridad]=(counts[u.prioridad]||0)+1; });
+  document.getElementById('whatsHdr').textContent=urg.length+' eventos · '+counts.CRITICO+' críticos';
+  document.getElementById('kwhat').innerHTML=[
+    {k:'CRITICO',lbl:'Críticos',val:counts.CRITICO,cls:'kr',icon:'🔴'},
+    {k:'ALTO',lbl:'Alto',val:counts.ALTO,cls:'ko',icon:'🟠'},
+    {k:'MEDIO',lbl:'Medio',val:counts.MEDIO,cls:'ky',icon:'🟡'},
+    {k:'BAJO',lbl:'Bajo',val:counts.BAJO,cls:'kg',icon:'🟢'},
+    {k:'RESUELTO',lbl:'Resueltos',val:counts.RESUELTO,cls:'kp',icon:'✅'},
+  ].map(d=>`<div class="kt ${d.cls}" onclick="setWF('${d.k}',document.getElementById('wf-${d.k}'))" style="cursor:pointer">
+    <div class="v">${d.icon} ${d.val}</div><div class="l">${d.lbl}</div>
+  </div>`).join('');
+  renderWAList();
+}
+
+function renderWAList(){
+  const urg=D.urgencias||[];
+  const filtered=urg.filter(u=>{
+    if(WA_FILTER==='ALL')return true;
+    if(WA_FILTER==='RESUELTO')return u.estatus==='Resuelto';
+    return u.prioridad===WA_FILTER&&u.estatus!=='Resuelto';
+  });
+  document.getElementById('walistlbl').textContent='📋 EVENTOS DETECTADOS ('+filtered.length+')';
+  const PCLS={CRITICO:'#e74c3c',ALTO:'#e67e22',MEDIO:'#f39c12',BAJO:'#27ae60'};
+  const PBG={CRITICO:'#fdf2f2',ALTO:'#fef9f0',MEDIO:'#fefdf0',BAJO:'#f0faf4'};
+  // Tabla estructurada — columnas claras
+  document.getElementById('walist').innerHTML=filtered.length?`
+    <div class="ovf">
+    <table class="tbl" style="font-size:11px">
+      <thead><tr>
+        <th>FECHA/HORA</th><th>UNIDAD</th><th>CAJA</th><th>COORDINADOR</th>
+        <th>TIPO</th><th>DESCRIPCIÓN</th><th>ESTATUS</th>
+        <th>RESUELTO</th><th>PENDIENTE</th><th>SEGUIMIENTO</th><th>ACCIONES</th>
+      </tr></thead>
+      <tbody>${filtered.map(u=>{
+        const PCLS2={CRITICO:'#e74c3c',ALTO:'#e67e22',MEDIO:'#f59e0b',BAJO:'#27ae60'};
+        const coord=u.coord||u.remite||'—';
+        const shortCoord=coord.split(' ').slice(0,2).join(' ');
+        const tipo=u.tipo||u.categoria||u.grupo||'—';
+        return`<tr style="background:${u.resuelto==='Sí'||u.estatus==='Resuelto'?'#f0fff4':'#fff'}">
+          <td style="white-space:nowrap;color:#64748b">${u.fecha||''} ${u.hora||''}</td>
+          <td class="bold tb3">${u.unidad&&u.unidad!=='—'?u.unidad:'—'}</td>
+          <td>${u.caja&&u.caja!=='—'?u.caja:'—'}</td>
+          <td style="font-size:10px">${shortCoord}</td>
+          <td><span style="background:${PCLS2[u.prioridad]||'#94a3b8'};color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;white-space:nowrap">${tipo}</span></td>
+          <td style="max-width:200px;font-size:10px;color:#1e293b">${(u.texto||'').substring(0,100)}${(u.texto||'').length>100?'…':''}</td>
+          <td><span class="bg ${u.estatus==='Resuelto'?'bgg':'bgy'}">${u.estatus||'Abierto'}</span></td>
+          <td style="text-align:center">${u.resuelto==='Sí'||u.resuelto===true?'✅':'❌'}</td>
+          <td style="text-align:center">${u.pendiente==='Sí'||u.pendiente===true?'⚠️':'—'}</td>
+          <td style="font-size:10px;color:#64748b">${(u.seguimiento||'').split(' ').slice(0,2).join(' ')||'—'}</td>
+          <td style="white-space:nowrap">
+            ${u.estatus!=='Resuelto'?`<button onclick="marcarWA(${u.id},'Resuelto')" style="background:#27ae60;color:#fff;border:none;padding:3px 8px;border-radius:5px;cursor:pointer;font-size:10px">✅</button>`:''}
+            <button onclick="D.urgencias=D.urgencias.filter(x=>x.id!==${u.id});saveStor();renderWAList()" style="background:#f8f9fa;color:#64748b;border:1px solid #e2e8f0;padding:3px 8px;border-radius:5px;cursor:pointer;font-size:10px">🗑️</button>
+          </td>
+        </tr>`;}).join('')}
+      </tbody>
+    </table></div>`
+  :`<div style="text-align:center;color:#94a3b8;padding:40px">
+    <div style="font-size:36px">💬</div>
+    <div style="font-size:13px;font-weight:700;margin-top:8px">${urg.length?'No hay eventos en esta categoría':'Sin urgencias — pega mensajes de WhatsApp o sincroniza el Sheet'}</div>
+  </div>`;
+}
+
+// ═══ CAJAS ═══
+
+function generarAnalisisCajaJS(est, diasSin, prog){
+  const e=(est||'').toUpperCase();
+  if(e.includes('TRÁNSITO')||e.includes('TRANSITO'))return'En tránsito'+(prog&&prog.destino?' → '+prog.destino:'');
+  if(e.includes('CARGAD'))return'Cargada — pendiente de salida';
+  if(prog&&prog.viaje)return'Programada viaje '+prog.viaje;
+  if(e.includes('DAÑA')||e.includes('SINIESTRO'))return'⚠️ Requiere atención — daño reportado';
+  if(e.includes('PATIO'))return'Disponible en patio';
+  if(e.includes('DISPONIB'))return'Disponible para asignación';
+  if(diasSin!==null&&diasSin>15)return'⚠️ Sin movimiento '+diasSin+' días — validar físicamente';
+  if(diasSin!==null&&diasSin>7)return'Sin movimiento '+diasSin+' días — verificar';
+  if(e.includes('CLIENT'))return'Con cliente — pendiente devolución';
+  if(e.includes('NO LOCAL')||e.includes('SIN UBIC'))return'❌ Sin ubicación — localizar urgente';
+  if(e.includes('PERMIS'))return'Asignada a permisionario';
+  if(e.includes('VENTA'))return'Caja en proceso de venta';
+  return 'Verificar estatus con patio';
+}
+
+let CAJA_FILTER='ALL';
+// Categorías exactas de cajas según el sistema
+const CAJ_CATS=['CARGADA','DISPONIBLE','EN PATIO','DAÑADA','EN TRÁNSITO','SINIESTRO','VACÍA','PERMISIONARIO','VENTA','NO LOCALIZADA'];
+function cajGrp(e){
+  const ev=(e||'').toUpperCase().trim();
+  if(ev.includes('CARGAD'))return'CARGADA';
+  if(ev.includes('DISPONIB'))return'DISPONIBLE';
+  if(ev.includes('PATIO'))return'EN PATIO';
+  if(ev.includes('DAÑA')||ev.includes('DANO')||ev.includes('DAÑAD'))return'DAÑADA';
+  if(ev.includes('TRÁNSITO')||ev.includes('TRANSITO')||ev.includes('TRANSIT')||ev.includes('RUTA'))return'EN TRÁNSITO';
+  if(ev.includes('SINIESTRO')||ev.includes('ACCIDENTE'))return'SINIESTRO';
+  if(ev.includes('VACÍA')||ev.includes('VACIA')||ev.includes('EMPTY'))return'VACÍA';
+  if(ev.includes('PERMISION'))return'PERMISIONARIO';
+  if(ev.includes('VENTA'))return'VENTA';
+  if(ev.includes('NO LOCAL')||ev.includes('SIN UBIC')||ev.includes('DESCONOC'))return'NO LOCALIZADA';
+  return'SIN UBICACIÓN';
+}
+function bCajas(){
+  const cajas=D.cajas||[];
+  const total=Math.max(130,cajas.length);
+  const counts={CARGADA:0,'VACÍA':0,'EN PATIO':0,'EN RUTA':0,'MANTENIMIENTO':0,'SIN UBICACIÓN':0};
+  cajas.forEach(c=>{const g=cajGrp(c.estatus);counts[g]=(counts[g]||0)+1;});
+  document.getElementById('cajhdr').textContent=total+' cajas totales · '+cajas.length+' con registro';
+  const ECLS={'CARGADA':'bgg','DISPONIBLE':'bgb','EN PATIO':'bgy','DAÑADA':'bgo','EN TRÁNSITO':'bgb','SINIESTRO':'bgp','VACÍA':'bgp','PERMISIONARIO':'bgy','VENTA':'bgg','NO LOCALIZADA':'bgr','SIN UBICACIÓN':'bgx'};
+  const kpiDefs=[
+    {k:'ALL',       lbl:'Total',         val:total,                    cls:'kb', icon:'📦'},
+    {k:'CARGADA',   lbl:'Cargadas',      val:counts['CARGADA']||0,     cls:'kg', icon:'✅'},
+    {k:'DISPONIBLE',lbl:'Disponibles',   val:counts['DISPONIBLE']||0,  cls:'kb', icon:'⬜'},
+    {k:'EN PATIO',  lbl:'En Patio',      val:counts['EN PATIO']||0,    cls:'ky', icon:'🏭'},
+    {k:'DAÑADA',    lbl:'Dañadas',       val:counts['DAÑADA']||0,      cls:'ko', icon:'🔧'},
+    {k:'EN TRÁNSITO',lbl:'En Tránsito',  val:counts['EN TRÁNSITO']||0, cls:'kb', icon:'🚛'},
+    {k:'SINIESTRO', lbl:'Siniestros',    val:counts['SINIESTRO']||0,   cls:'kp', icon:'🛡️'},
+    {k:'VACÍA',     lbl:'Vacías',        val:counts['VACÍA']||0,       cls:'kp', icon:'📭'},
+    {k:'PERMISIONARIO',lbl:'Permisionario',val:counts['PERMISIONARIO']||0,cls:'ky',icon:'📋'},
+    {k:'VENTA',     lbl:'Venta',         val:counts['VENTA']||0,       cls:'kg', icon:'💰'},
+    {k:'NO LOCALIZADA',lbl:'No Localizada',val:counts['NO LOCALIZADA']||0,cls:'kr2',icon:'❓'},
+  ];
+  document.getElementById('kcaj').innerHTML=kpiDefs.map(d=>`
+    <div class="kt ${d.cls}" onclick="setCajF('${d.k}')" style="cursor:pointer;outline:${CAJA_FILTER===d.k?'2px solid #1a1a2e':'2px solid transparent'};outline-offset:-2px">
+      <div class="v">${d.icon} ${d.val}</div><div class="l">${d.lbl}</div>
+      <div class="s" style="font-size:9px">${total>0&&d.k!='ALL'?Math.round(d.val/total*100)+'% del total':''}</div>
+    </div>`).join('');
+  renderCajasTable(cajas,'');
+  renderCajasByCoord(cajas);
+}
+
+function renderCajasByCoord(cajas){
+  const el=document.getElementById('cajbycoord');if(!el)return;
+  if(!cajas.length){el.innerHTML='<div style="color:#64748b;font-size:11px;text-align:center;padding:12px">Sin datos</div>';return;}
+  // Agrupar por coordinador
+  const cm={};
+  cajas.forEach(c=>{
+    const coord=c.coord||c.op||'Sin asignar'; // usar campo coord si existe, sino operador
+    if(!cm[coord])cm[coord]={coord,total:0,cats:{}};
+    cm[coord].total++;
+    const g=cajGrp(c.estatus);
+    cm[coord].cats[g]=(cm[coord].cats[g]||0)+1;
+  });
+  // Si no hay campo coord, agrupar por ubicación
+  const coords=Object.values(cm).sort((a,b)=>b.total-a.total);
+  el.innerHTML=coords.length?coords.map(c=>`
+    <tr>
+      <td class="bold" style="font-size:11px">${c.coord.split(' ').slice(0,3).join(' ')}</td>
+      <td class="bold tb3">${c.total}</td>
+      <td style="color:#27ae60">${c.cats['CARGADA']||0}</td>
+      <td>${c.cats['DISPONIBLE']||0}</td>
+      <td>${c.cats['EN PATIO']||0}</td>
+      <td style="color:#e67e22">${c.cats['DAÑADA']||0}</td>
+      <td>${c.cats['EN TRÁNSITO']||0}</td>
+      <td style="color:#9b59b6">${c.cats['SINIESTRO']||0}</td>
+      <td>${c.cats['NO LOCALIZADA']||0}</td>
+    </tr>`).join('')
+    :'<tr><td colspan=9 style="text-align:center;color:#64748b;padding:12px">Sin datos por coordinador</td></tr>';
+}
+function setCajF(k){
+  CAJA_FILTER=k;
+  document.getElementById('cajsrch').value='';
+  renderCajasTable(D.cajas||[],'');
+  // Scroll automático a la tabla de detalle
+  const tbl=document.getElementById('cajtbl');
+  if(tbl)tbl.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function renderCajasTable(cajas,q){
+  const ECLS={'CARGADA':'bgg','DISPONIBLE':'bgb','EN PATIO':'bgy','DAÑADA':'bgo','EN TRÁNSITO':'bgb','SINIESTRO':'bgp','VACÍA':'bgp','PERMISIONARIO':'bgy','VENTA':'bgg','NO LOCALIZADA':'bgr','SIN UBICACIÓN':'bgx'};
+  const filtered=(cajas||[]).filter(c=>{
+    if(CAJA_FILTER!=='ALL'&&cajGrp(c.estatus)!==CAJA_FILTER)return false;
+    if(q){const ql=q.toLowerCase();return[c.num,c.estatus,c.cliente,c.viaje,c.op,c.ubicacion].some(s=>(s||'').toLowerCase().includes(ql));}
+    return true;
+  });
+  const lbl=CAJA_FILTER==='ALL'?'📋 DETALLE COMPLETO':'📋 '+CAJA_FILTER+' — '+filtered.length+' cajas';
+  document.getElementById('cajdetlbl').textContent=lbl;
+  document.getElementById('cajbody').innerHTML=filtered.length
+    ?filtered.map(c=>{const g=cajGrp(c.estatus);return`<tr>
+      <td class="bold tb3">${c.num||'—'}</td>
+      <td><span class="bg ${ECLS[g]||'bgx'}">${c.estatus||g}</span></td>
+      <td>${c.cliente||'—'}</td><td>${c.viaje||'—'}</td>
+      <td style="font-size:10px">${c.op?(c.op.split(' ').slice(0,3).join(' ')):'—'}</td>
+      <td>${c.ubicacion||'—'}</td>
+      <td style="font-size:10px;color:#64748b">${c.actualizado||'—'}</td></tr>`;}).join('')
+    :`<tr><td colspan="7" style="text-align:center;color:#64748b;padding:30px">${(cajas&&cajas.length)?'No hay cajas en este estatus':'Carga el archivo de Cajas en 📂 Actualizar Datos'}</td></tr>`;
+}
+function filterCajas(q){CAJA_FILTER='ALL';renderCajasTable(D.cajas||[],q);}
+
+// ═══ INIT ═══
+document.addEventListener('DOMContentLoaded',()=>{
+  const restored=loadStor();
+  if(!restored){
+    // Sin datos guardados: mostrar estado vacío limpio
+    const b=document.getElementById('sbanner');if(b)b.style.display='none';
+    // Si no hay datos en localStorage, limpiar D para mostrar estado vacío
+    if(!D.units||D.units.length===0){
+      D.units=[];D.circs=[];D.acc=[];D.multas=[];D.indis=[];
+      D.op_rec=[];D.unit_rec=[];D.mov_rh=[];D.cajas=[];
+      D.K={total:0,trn:0,vta:0,dco:0,lib:0,so:0,cp:0,sg:0,rm:0,per:0,
+        prod:0,improd:0,prod_pct:0,improd_pct:0,inc_may:0,acc:0,
+        multas:0,multas_costo:0,rend_avg:0,bajo_rend:0,venta:0,
+        fact_mes:0,util_mes:0,sol_mtto:0};
+    }
+  }
+  if(!D.cajas)D.cajas=[];
+  if(!D.urgencias)D.urgencias=[];
+  const br=document.getElementById('brandNm');
+  if(br)br.textContent='HUB OPERATIVO · ABC XIMPLE'+(D.units.length?' · '+D.units.length+' UNIDADES':'');
+  bDash();
+  renderGrid(D.units);
+  startAutoRefresh();
+  // PWA install prompt
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt',e=>{
+    e.preventDefault();deferredPrompt=e;
+    const btn=document.createElement('button');
+    btn.id='installBtn';btn.textContent='📲 Instalar App';
+    btn.style='background:#9b59b6;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;margin-left:4px';
+    btn.onclick=async()=>{deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;if(outcome==='accepted')btn.remove();};
+    const navR=document.querySelector('.nav-r');if(navR)navR.insertBefore(btn,navR.firstChild);
+  });
+});
+</script>
+</body>
+</html>
